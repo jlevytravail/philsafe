@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, ChevronLeft, ChevronRight, Clock, User } from 'lucide-react-native';
+import { Calendar, ChevronLeft, ChevronRight, Clock, User, Plus, Home } from 'lucide-react-native';
 import { caregivers } from '@/data/mockData';
 import { useVisits } from '@/context/VisitContext';
 import { router } from 'expo-router';
+import AddFamilyVisitModal from '@/components/AddFamilyVisitModal';
 
 export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const { visits } = useVisits();
+  const [modalVisible, setModalVisible] = useState(false);
+  const { visits, familyVisits, addFamilyVisit } = useVisits();
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -30,11 +32,13 @@ export default function CalendarScreen() {
       const currentDate = new Date(year, month, day);
       const dateString = currentDate.toISOString().split('T')[0];
       const dayVisits = visits.filter(visit => visit.date === dateString);
+      const dayFamilyVisits = familyVisits.filter(fv => fv.date === dateString);
       
       days.push({
         day,
         date: currentDate,
         visits: dayVisits,
+        familyVisits: dayFamilyVisits,
         isToday: currentDate.toDateString() === new Date().toDateString(),
         isSelected: currentDate.toDateString() === selectedDate.toDateString(),
       });
@@ -45,7 +49,10 @@ export default function CalendarScreen() {
 
   const getVisitsForSelectedDate = () => {
     const dateString = selectedDate.toISOString().split('T')[0];
-    return visits.filter(visit => visit.date === dateString);
+    const dayVisits = visits.filter(visit => visit.date === dateString);
+    const dayFamilyVisits = familyVisits.filter(fv => fv.date === dateString);
+    
+    return { visits: dayVisits, familyVisits: dayFamilyVisits };
   };
 
   const getCaregiverById = (id: string) => {
@@ -63,7 +70,7 @@ export default function CalendarScreen() {
   };
 
   const days = getDaysInMonth(selectedDate);
-  const selectedDateVisits = getVisitsForSelectedDate();
+  const { visits: selectedDateVisits, familyVisits: selectedDateFamilyVisits } = getVisitsForSelectedDate();
 
   const monthNames = [
     'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -109,7 +116,7 @@ export default function CalendarScreen() {
               styles.dayCell,
               day?.isToday && styles.todayCell,
               day?.isSelected && styles.selectedCell,
-              day?.visits.length > 0 && styles.hasVisitsCell,
+              (day?.visits.length > 0 || day?.familyVisits?.length > 0) && styles.hasVisitsCell,
             ]}
             onPress={() => day && setSelectedDate(day.date)}
             disabled={!day}
@@ -123,9 +130,11 @@ export default function CalendarScreen() {
                 ]}>
                   {day.day}
                 </Text>
-                {day.visits.length > 0 && (
+                {(day.visits.length > 0 || day.familyVisits?.length > 0) && (
                   <View style={styles.visitIndicator}>
-                    <Text style={styles.visitCount}>{day.visits.length}</Text>
+                    <Text style={styles.visitCount}>
+                      {day.visits.length + (day.familyVisits?.length || 0)}
+                    </Text>
                   </View>
                 )}
               </>
@@ -144,44 +153,100 @@ export default function CalendarScreen() {
           })}
         </Text>
         
-        {selectedDateVisits.length > 0 ? (
-          selectedDateVisits.map(visit => {
-            const caregiver = getCaregiverById(visit.caregiverId);
-            return (
-              <TouchableOpacity
-                key={visit.id}
-                style={styles.visitItem}
-                onPress={() => router.push(`/visit/${visit.id}`)}
-              >
+        {(selectedDateVisits.length > 0 || selectedDateFamilyVisits.length > 0) ? (
+          <>
+            {/* Visites soignantes */}
+            {selectedDateVisits.map(visit => {
+              const caregiver = getCaregiverById(visit.caregiverId);
+              return (
+                <TouchableOpacity
+                  key={visit.id}
+                  style={[
+                    styles.visitItem,
+                    visit.status === 'completed' && styles.completedVisit
+                  ]}
+                  onPress={() => router.push(`/visit/${visit.id}`)}
+                >
+                  <View style={styles.visitTime}>
+                    <Clock size={16} color="#6B7280" />
+                    <Text style={styles.visitTimeText}>
+                      {visit.startTime} - {visit.endTime}
+                    </Text>
+                    {visit.status === 'completed' && (
+                      <View style={styles.completedBadge}>
+                        <Text style={styles.completedText}>Effectuée</Text>
+                      </View>
+                    )}
+                  </View>
+                  
+                  <View style={styles.visitInfo}>
+                    <View style={styles.caregiverInfo}>
+                      <User size={16} color="#6B7280" />
+                      <Text style={styles.caregiverText}>
+                        {caregiver?.name} • {caregiver?.role}
+                      </Text>
+                    </View>
+                    
+                    <View style={styles.careTypes}>
+                      {visit.careType.map((type, index) => (
+                        <Text key={index} style={styles.careType}>{type}</Text>
+                      ))}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+            
+            {/* Visites familiales */}
+            {selectedDateFamilyVisits.map(familyVisit => (
+              <View key={familyVisit.id} style={[styles.visitItem, styles.familyVisit]}>
                 <View style={styles.visitTime}>
-                  <Clock size={16} color="#6B7280" />
+                  <Clock size={16} color="#8B5CF6" />
                   <Text style={styles.visitTimeText}>
-                    {visit.startTime} - {visit.endTime}
+                    {familyVisit.startTime}
+                    {familyVisit.endTime && ` - ${familyVisit.endTime}`}
                   </Text>
                 </View>
                 
                 <View style={styles.visitInfo}>
                   <View style={styles.caregiverInfo}>
-                    <User size={16} color="#6B7280" />
-                    <Text style={styles.caregiverText}>
-                      {caregiver?.name} • {caregiver?.role}
+                    <Home size={16} color="#8B5CF6" />
+                    <Text style={styles.familyVisitText}>
+                      Visite familiale{familyVisit.name && ` de ${familyVisit.name}`} • {familyVisit.type}
                     </Text>
                   </View>
                   
-                  <View style={styles.careTypes}>
-                    {visit.careType.map((type, index) => (
-                      <Text key={index} style={styles.careType}>{type}</Text>
-                    ))}
-                  </View>
+                  {familyVisit.notes && (
+                    <Text style={styles.familyNotes}>{familyVisit.notes}</Text>
+                  )}
                 </View>
-              </TouchableOpacity>
-            );
-          })
+              </View>
+            ))}
+          </>
         ) : (
           <View style={styles.noVisits}>
             <Text style={styles.noVisitsText}>Aucune visite prévue ce jour</Text>
           </View>
         )}
+      </ScrollView>
+      
+      <TouchableOpacity 
+        style={styles.addButton}
+        onPress={() => setModalVisible(true)}
+      >
+        <Plus size={24} color="#FFFFFF" />
+        <Text style={styles.addButtonText}>Ajouter une venue familiale</Text>
+      </TouchableOpacity>
+      
+      <AddFamilyVisitModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onAdd={addFamilyVisit}
+        selectedDate={selectedDate}
+      />
+    </SafeAreaView>
+  );
+}
       </ScrollView>
     </SafeAreaView>
   );
@@ -364,5 +429,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  completedVisit: {
+    opacity: 0.7,
+    backgroundColor: '#F0FDF4',
+  },
+  completedBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  completedText: {
+    fontSize: 10,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  familyVisit: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
+    backgroundColor: '#FAF5FF',
+  },
+  familyVisitText: {
+    marginLeft: 4,
+    fontSize: 14,
+    color: '#8B5CF6',
+    fontWeight: '500',
+  },
+  familyNotes: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  addButton: {
+    backgroundColor: '#8B5CF6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+  },
+  addButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

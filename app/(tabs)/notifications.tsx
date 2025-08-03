@@ -259,6 +259,5 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 24,
+import React, { useState, useEffect } from 'react';
     paddingHorizontal: 32,
-  },
-});

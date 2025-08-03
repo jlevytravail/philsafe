@@ -111,7 +111,6 @@ export default function Dashboard() {
         </View>
 
         <WeekPreview visits={visits} caregivers={caregivers} />
-        <WeekPreview caregivers={caregivers} />
       </ScrollView>
     </SafeAreaView>
   );

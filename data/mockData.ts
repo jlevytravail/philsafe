@@ -126,6 +126,35 @@ export function getInitialVisits(): Visit[] {
   ];
 }
 
+export const initialFamilyVisits: FamilyVisit[] = [
+  {
+    id: 'fv1',
+    name: 'Claire',
+    date: formatDate(yesterday),
+    startTime: '12:00',
+    endTime: '13:30',
+    type: 'repas',
+    notes: 'Déjeuner ensemble, maman en forme'
+  },
+  {
+    id: 'fv2',
+    name: 'Jean (fils)',
+    date: formatDate(tomorrow),
+    startTime: '16:00',
+    endTime: '17:00',
+    type: 'visite',
+    notes: 'Visite de courtoisie'
+  },
+  {
+    id: 'fv3',
+    name: 'Claire',
+    date: formatDate(dayAfterTomorrow),
+    startTime: '19:00',
+    type: 'appel',
+    notes: 'Appel vidéo quotidien'
+  }
+];
+
 export const caregivers: Caregiver[] = [
   {
     id: '1',

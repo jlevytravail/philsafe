@@ -94,15 +94,21 @@ export function VisitProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => [notification, ...prev]);
   };
 
+  const addFamilyVisit = (familyVisit: FamilyVisit) => {
+    setFamilyVisits(prev => [...prev, familyVisit]);
+  };
+
   return (
     <VisitContext.Provider value={{
       visits,
       events,
       notifications,
+      familyVisits,
       updateVisitStatus,
       resetVisits,
       addEvent,
-      addNotification
+      addNotification,
+      addFamilyVisit
     }}>
       {children}
     </VisitContext.Provider>

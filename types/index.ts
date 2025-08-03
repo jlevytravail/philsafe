@@ -34,3 +34,13 @@ export interface Notification {
   type: 'info' | 'success' | 'warning' | 'error';
   read: boolean;
 }
+
+export interface FamilyVisit {
+  id: string;
+  name?: string;
+  date: string;
+  startTime: string;
+  endTime?: string;
+  type: 'visite' | 'repas' | 'appel' | 'aide' | 'autre';
+  notes?: string;
+}

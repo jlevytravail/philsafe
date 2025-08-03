@@ -27,10 +27,22 @@ export default function EventCard({ event }: EventCardProps) {
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('fr-FR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+    
+    if (isToday) {
+      return date.toLocaleTimeString('fr-FR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } else {
+      return date.toLocaleDateString('fr-FR', { 
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    }
   };
 
   return (

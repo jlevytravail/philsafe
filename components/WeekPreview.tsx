@@ -149,4 +149,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
+  visitCount: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  visitCountText: {
+    fontSize: 10,
+    color: '#3B82F6',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
 });

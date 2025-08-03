@@ -4,9 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, Clock, User, Phone, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle, MessageSquare, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { visits, caregivers } from '@/data/mockData';
+import { useVisits } from '@/context/VisitContext';
+import { visits, caregivers } from '@/data/mockData';
 
 export default function VisitDetail() {
   const { id } = useLocalSearchParams();
+  const { visits, updateVisitStatus } = useVisits();
   const visit = visits.find(v => v.id === id);
   const caregiver = visit ? caregivers.find(c => c.id === visit.caregiverId) : null;
 
@@ -63,6 +66,12 @@ export default function VisitDetail() {
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const handleMarkAsCompleted = () => {
+    if (visit && visit.status === 'scheduled') {
+      updateVisitStatus(visit.id, 'completed');
+    }
   };
 
   return (
@@ -151,6 +160,16 @@ export default function VisitDetail() {
           <Text style={styles.patientTitle}>Patient</Text>
           <Text style={styles.patientName}>{visit.patientName}</Text>
         </View>
+        
+        {visit.status === 'scheduled' && (
+          <TouchableOpacity 
+            style={styles.completeButton}
+            onPress={handleMarkAsCompleted}
+          >
+            <CheckCircle size={20} color="#FFFFFF" />
+            <Text style={styles.completeButtonText}>Marquer comme effectuée</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -385,5 +404,22 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     color: '#6B7280',
+  },
+  completeButton: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 16,
+  },
+  completeButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
