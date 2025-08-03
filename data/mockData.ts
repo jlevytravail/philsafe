@@ -1,18 +1,19 @@
-import { Caregiver, Visit, Event, Notification } from '@/types';
+import { Caregiver, Visit, Event, Notification, FamilyVisit } from '@/types';
 
 // Fonction utilitaire pour formater les dates
-const formatDate = (date: Date) => date.toISOString().split('T')[0];
+export const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+// Variables de date utilisées dans toute l'application
+const today = new Date();
+const yesterday = new Date(today);
+yesterday.setDate(today.getDate() - 1);
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+const dayAfterTomorrow = new Date(today);
+dayAfterTomorrow.setDate(today.getDate() + 2);
 
 // Fonction pour générer des données de visite dynamiques
 export function getInitialVisits(): Visit[] {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  const dayAfterTomorrow = new Date(today);
-  dayAfterTomorrow.setDate(today.getDate() + 2);
-
   return [
     // Visites d'hier (terminées)
     {
