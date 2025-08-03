@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Visit, Event, Notification } from '@/types';
 import { getInitialVisits, caregivers, events as initialEvents, notifications as initialNotifications } from '@/data/mockData';
-import NotificationService from '@/utils/notifications';
 
 interface VisitContextType {
   visits: Visit[];
@@ -69,9 +68,6 @@ export function VisitProvider({ children }: { children: ReactNode }) {
           };
           
           setNotifications(prev => [newNotification, ...prev]);
-          
-          // Déclencher la notification via le service
-          NotificationService.getInstance().simulateNotification(newNotification);
         }
         
         return updatedVisit;

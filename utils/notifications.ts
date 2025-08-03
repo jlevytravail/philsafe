@@ -29,6 +29,9 @@ class NotificationService {
 
   // Mock function to simulate real-time notifications
   startMockNotifications() {
+    // Clear any existing timeouts to prevent multiple instances
+    this.clearMockNotifications();
+    
     const mockNotifications = [
       {
         id: Date.now().toString(),
@@ -50,10 +53,20 @@ class NotificationService {
 
     // Simulate notifications at intervals
     mockNotifications.forEach((notification, index) => {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         this.simulateNotification(notification);
       }, (index + 1) * 10000); // 10 seconds between each notification
+      
+      // Store timeout ID for cleanup
+      this.timeoutIds.push(timeoutId);
     });
+  }
+
+  private timeoutIds: NodeJS.Timeout[] = [];
+
+  clearMockNotifications() {
+    this.timeoutIds.forEach(id => clearTimeout(id));
+    this.timeoutIds = [];
   }
 }
 
