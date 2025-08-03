@@ -258,7 +258,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 24,
     paddingHorizontal: 32,
   },
 });

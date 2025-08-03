@@ -5,7 +5,6 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ArrowLeft, Clock, User, Phone, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle, MessageSquare, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { visits, caregivers } from '@/data/mockData';
 import { useVisits } from '@/context/VisitContext';
-import { visits, caregivers } from '@/data/mockData';
 
 export default function VisitDetail() {
   const { id } = useLocalSearchParams();
