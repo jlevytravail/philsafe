@@ -381,9 +381,13 @@ const styles = StyleSheet.create({
   },
   completedVisit: {
     backgroundColor: '#F0FDF4',
+    borderLeftWidth: 4,
+    borderLeftColor: '#10B981',
   },
   familyVisit: {
     backgroundColor: '#FAF5FF',
+    borderLeftWidth: 4,
+    borderLeftColor: '#8B5CF6',
   },
   visitTime: {
     flexDirection: 'row',
@@ -400,13 +404,13 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     backgroundColor: '#10B981',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 2,
     borderRadius: 12,
   },
   completedText: {
     fontSize: 12,
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   visitInfo: {
     gap: 8,
@@ -430,6 +434,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     fontStyle: 'italic',
+    marginTop: 4,
   },
   careTypes: {
     flexDirection: 'row',
@@ -463,11 +468,19 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 16,
     borderRadius: 12,
-    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   addButtonText: {
-    color: '#FFFFFF',
+    marginLeft: 8,
     fontSize: 16,
     fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
