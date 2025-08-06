@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Clock, User, MapPin, Play, Square, CheckSquare, MessageSquare } from 'lucide-react-native';
+import { ArrowLeft, Clock, User, MapPin, Play, Square, SquareCheck as CheckSquare, MessageSquare } from 'lucide-react-native';
 import { useVisits } from '@/context/VisitContext';
 import { caregivers } from '@/data/mockData';
 import { useThemeContext } from '@/context/ThemeContext';
