@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView } from 'react-native';
-import { X, Calendar, Clock, User, MessageSquare } from 'lucide-react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ScrollView, Platform } from 'react-native';
+import { X, Calendar, Clock, User, MessageSquare, ChevronDown } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { FamilyVisit } from '@/types';
 
 interface AddFamilyVisitModalProps {
@@ -17,13 +18,17 @@ export default function AddFamilyVisitModal({
   selectedDate 
 }: AddFamilyVisitModalProps) {
   const [name, setName] = useState('');
-  const [date, setDate] = useState(
-    selectedDate ? selectedDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-  );
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [date, setDate] = useState(selectedDate || new Date());
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date());
   const [type, setType] = useState<FamilyVisit['type']>('visite');
   const [notes, setNotes] = useState('');
+  
+  // États pour contrôler l'affichage des pickers
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [hasEndTime, setHasEndTime] = useState(false);
 
   const visitTypes = [
     { value: 'visite', label: 'Visite' },
@@ -33,40 +38,70 @@ export default function AddFamilyVisitModal({
     { value: 'autre', label: 'Autre' }
   ];
 
-  const handleSubmit = () => {
-    if (!startTime) {
-      alert('Veuillez saisir une heure de début');
-      return;
-    }
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
+  };
+
+  const handleStartTimeChange = (event: any, selectedTime?: Date) => {
+    setShowStartTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setStartTime(selectedTime);
+    }
+  };
+
+  const handleEndTimeChange = (event: any, selectedTime?: Date) => {
+    setShowEndTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setEndTime(selectedTime);
+    }
+  };
+
+  const handleSubmit = () => {
     const newFamilyVisit: FamilyVisit = {
       id: Date.now().toString(),
       name: name || undefined,
-      date,
-      startTime,
-      endTime: endTime || undefined,
+      date: date.toISOString().split('T')[0],
+      startTime: formatTime(startTime),
+      endTime: hasEndTime ? formatTime(endTime) : undefined,
       type,
       notes: notes || undefined
     };
 
     onAdd(newFamilyVisit);
-    
-    // Reset form
-    setName('');
-    setStartTime('');
-    setEndTime('');
-    setType('visite');
-    setNotes('');
-    onClose();
+    handleClose();
   };
 
   const handleClose = () => {
     // Reset form
     setName('');
-    setStartTime('');
-    setEndTime('');
+    setDate(selectedDate || new Date());
+    setStartTime(new Date());
+    setEndTime(new Date());
     setType('visite');
     setNotes('');
+    setHasEndTime(false);
+    setShowDatePicker(false);
+    setShowStartTimePicker(false);
+    setShowEndTimePicker(false);
     onClose();
   };
 
@@ -105,47 +140,94 @@ export default function AddFamilyVisitModal({
               <Calendar size={16} color="#6B7280" />
               <Text style={styles.fieldLabel}>Date</Text>
             </View>
-            <TextInput
-              style={styles.textInput}
-              value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9CA3AF"
-            />
+            <TouchableOpacity
+              style={styles.pickerButton}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={styles.pickerButtonText}>
+                {formatDate(date)}
+              </Text>
+              <ChevronDown size={20} color="#6B7280" />
+            </TouchableOpacity>
+            
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+              />
+            )}
           </View>
 
-          <View style={styles.timeRow}>
-            <View style={[styles.field, styles.timeField]}>
-              <View style={styles.fieldHeader}>
-                <Clock size={16} color="#6B7280" />
-                <Text style={styles.fieldLabel}>Début</Text>
-              </View>
-              <TextInput
-                style={styles.textInput}
-                value={startTime}
-                onChangeText={setStartTime}
-                placeholder="HH:MM"
-                placeholderTextColor="#9CA3AF"
-              />
+          <View style={styles.field}>
+            <View style={styles.fieldHeader}>
+              <Clock size={16} color="#6B7280" />
+              <Text style={styles.fieldLabel}>Heure de début</Text>
             </View>
-
-            <View style={[styles.field, styles.timeField]}>
-              <View style={styles.fieldHeader}>
-                <Clock size={16} color="#6B7280" />
-                <Text style={styles.fieldLabel}>Fin (optionnel)</Text>
-              </View>
-              <TextInput
-                style={styles.textInput}
-                value={endTime}
-                onChangeText={setEndTime}
-                placeholder="HH:MM"
-                placeholderTextColor="#9CA3AF"
+            <TouchableOpacity
+              style={styles.pickerButton}
+              onPress={() => setShowStartTimePicker(true)}
+            >
+              <Text style={styles.pickerButtonText}>
+                {formatTime(startTime)}
+              </Text>
+              <ChevronDown size={20} color="#6B7280" />
+            </TouchableOpacity>
+            
+            {showStartTimePicker && (
+              <DateTimePicker
+                value={startTime}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleStartTimeChange}
               />
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <View style={styles.fieldHeader}>
+              <Clock size={16} color="#6B7280" />
+              <Text style={styles.fieldLabel}>Heure de fin</Text>
+            </View>
+            
+            <View style={styles.endTimeContainer}>
+              <TouchableOpacity
+                style={[styles.toggleButton, hasEndTime && styles.toggleButtonActive]}
+                onPress={() => setHasEndTime(!hasEndTime)}
+              >
+                <Text style={[styles.toggleButtonText, hasEndTime && styles.toggleButtonTextActive]}>
+                  {hasEndTime ? 'Heure de fin définie' : 'Pas d\'heure de fin'}
+                </Text>
+              </TouchableOpacity>
+              
+              {hasEndTime && (
+                <>
+                  <TouchableOpacity
+                    style={styles.pickerButton}
+                    onPress={() => setShowEndTimePicker(true)}
+                  >
+                    <Text style={styles.pickerButtonText}>
+                      {formatTime(endTime)}
+                    </Text>
+                    <ChevronDown size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                  
+                  {showEndTimePicker && (
+                    <DateTimePicker
+                      value={endTime}
+                      mode="time"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleEndTimeChange}
+                    />
+                  )}
+                </>
+              )}
             </View>
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Pourquoi ?</Text>
+            <Text style={styles.fieldLabel}>Type de venue</Text>
             <View style={styles.typeSelector}>
               {visitTypes.map((visitType) => (
                 <TouchableOpacity
@@ -252,12 +334,44 @@ const styles = StyleSheet.create({
     height: 80,
     textAlignVertical: 'top',
   },
-  timeRow: {
+  pickerButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  endTimeContainer: {
     gap: 12,
   },
-  timeField: {
-    flex: 1,
+  toggleButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#EBF8FF',
+    borderColor: '#3B82F6',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  toggleButtonTextActive: {
+    color: '#3B82F6',
   },
   typeSelector: {
     flexDirection: 'row',

@@ -65,9 +65,6 @@ export default function Dashboard() {
           <Text style={styles.welcomeMessage}>
             Bonjour Claire, voici les dernières infos sur votre maman
           </Text>
-          <Text style={styles.subtitle}>
-            Suivi des soins pour Mme Dupont
-          </Text>
           <Text style={styles.currentTime}>
             {currentTime.toLocaleDateString('fr-FR', { 
               weekday: 'long', 
