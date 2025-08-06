@@ -55,22 +55,22 @@ export default function AddFamilyVisitModal({
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
+    setShowDatePicker(false);
+    if (event.type === 'set' && selectedDate) {
       setDate(selectedDate);
     }
   };
 
   const handleStartTimeChange = (event: any, selectedTime?: Date) => {
-    setShowStartTimePicker(Platform.OS === 'ios');
-    if (selectedTime) {
+    setShowStartTimePicker(false);
+    if (event.type === 'set' && selectedTime) {
       setStartTime(selectedTime);
     }
   };
 
   const handleEndTimeChange = (event: any, selectedTime?: Date) => {
-    setShowEndTimePicker(Platform.OS === 'ios');
-    if (selectedTime) {
+    setShowEndTimePicker(false);
+    if (event.type === 'set' && selectedTime) {
       setEndTime(selectedTime);
     }
   };
@@ -142,7 +142,7 @@ export default function AddFamilyVisitModal({
             </View>
             <TouchableOpacity
               style={styles.pickerButton}
-              onPress={() => setShowDatePicker(true)}
+              onPress={() => setShowDatePicker(!showDatePicker)}
             >
               <Text style={styles.pickerButtonText}>
                 {formatDate(date)}
@@ -154,7 +154,7 @@ export default function AddFamilyVisitModal({
               <DateTimePicker
                 value={date}
                 mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="spinner"
                 onChange={handleDateChange}
               />
             )}
@@ -167,7 +167,7 @@ export default function AddFamilyVisitModal({
             </View>
             <TouchableOpacity
               style={styles.pickerButton}
-              onPress={() => setShowStartTimePicker(true)}
+              onPress={() => setShowStartTimePicker(!showStartTimePicker)}
             >
               <Text style={styles.pickerButtonText}>
                 {formatTime(startTime)}
@@ -179,7 +179,7 @@ export default function AddFamilyVisitModal({
               <DateTimePicker
                 value={startTime}
                 mode="time"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                display="spinner"
                 onChange={handleStartTimeChange}
               />
             )}
@@ -205,7 +205,7 @@ export default function AddFamilyVisitModal({
                 <>
                   <TouchableOpacity
                     style={styles.pickerButton}
-                    onPress={() => setShowEndTimePicker(true)}
+                    onPress={() => setShowEndTimePicker(!showEndTimePicker)}
                   >
                     <Text style={styles.pickerButtonText}>
                       {formatTime(endTime)}
@@ -217,7 +217,7 @@ export default function AddFamilyVisitModal({
                     <DateTimePicker
                       value={endTime}
                       mode="time"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      display="spinner"
                       onChange={handleEndTimeChange}
                     />
                   )}
