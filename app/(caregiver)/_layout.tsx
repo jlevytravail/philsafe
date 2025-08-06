@@ -25,7 +25,7 @@ export default function CaregiverTabLayout() {
         },
       }}>
       <Tabs.Screen
-        name="appointments"
+        name="index"
         options={{
           title: 'Mes RDV',
           tabBarIcon: ({ size, color }) => (
