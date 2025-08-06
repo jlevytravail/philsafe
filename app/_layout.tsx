@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
@@ -9,6 +10,17 @@ import { RoleProvider, useRole } from '@/context/RoleContext';
 
 function AppContent() {
   const { role, isLoading } = useRole();
+
+  useEffect(() => {
+    if (!isLoading) {
+      // Force navigation to the correct interface based on role
+      if (role === 'family') {
+        router.replace('/(tabs)');
+      } else if (role === 'caregiver') {
+        router.replace('/(caregiver)');
+      }
+    }
+  }, [role, isLoading]);
 
   if (isLoading) {
     return (
