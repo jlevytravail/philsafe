@@ -349,11 +349,13 @@ export default function AddFamilyVisitModal({
             <View style={styles.endTimeContainer}>
               <TouchableOpacity
                 style={[styles.toggleButton, hasEndTime && styles.toggleButtonActive]}
-                  styles.toggleButton,
+                onPress={() => setHasEndTime(!hasEndTime)}
+              >
+                <Text style={[
                   styles.toggleButtonText,
                   { color: colors.textSecondary },
                   hasEndTime && [styles.toggleButtonTextActive, { color: colors.primary }]
-                <Text style={[styles.toggleButtonText, hasEndTime && styles.toggleButtonTextActive]}>
+                ]}>
                   {hasEndTime ? 'Heure de fin définie' : 'Pas d\'heure de fin'}
                 </Text>
               </TouchableOpacity>
