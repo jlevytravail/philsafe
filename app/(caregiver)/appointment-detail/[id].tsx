@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Clock, User, MapPin, Play, Square, SquareCheck as CheckSquare, MessageSquare } from 'lucide-react-native';
+import { ArrowLeft, Clock, User, MapPin, Play, Square, SquareCheck as CheckSquare, MessageSquare, CircleCheck, TriangleAlert as AlertTriangle, Circle } from 'lucide-react-native';
 import { useVisits } from '@/context/VisitContext';
 import { caregivers } from '@/data/mockData';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -68,6 +68,7 @@ export default function AppointmentDetail() {
     statusText: {
       fontSize: 16,
       fontWeight: '600',
+      marginLeft: 8,
     },
     visitDate: {
       fontSize: 16,
@@ -85,7 +86,230 @@ export default function AppointmentDetail() {
       shadowRadius: 3.84,
       elevation: 5,
     },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    cardTitle: {
+      marginLeft: 8,
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    infoLabel: {
+      fontSize: 14,
+      color: colors.textTertiary,
+    },
+    infoValue: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+      flex: 1,
+      textAlign: 'right',
+    },
+    careTypeContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 12,
+    },
+    careTypeBadge: {
+      backgroundColor: colors.primaryLight,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      marginRight: 8,
+      marginBottom: 8,
+    },
+    careTypeText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: colors.primary,
+    },
+    checkoutForm: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 20,
+      marginBottom: 16,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    checklistTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 16,
+    },
+    taskItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    taskText: {
+      marginLeft: 12,
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    completedTask: {
+      textDecorationLine: 'line-through',
+      color: colors.textTertiary,
+    },
+    notesInput: {
+      backgroundColor: colors.surfaceSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      marginTop: 16,
+      marginBottom: 16,
+      minHeight: 80,
+      textAlignVertical: 'top',
+      fontSize: 16,
+      color: colors.text,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      borderRadius: 12,
+      margin: 16,
+    },
+    checkInButton: {
+      backgroundColor: '#10B981',
+    },
+    checkOutButton: {
+      backgroundColor: '#F59E0B',
+    },
+    completeButton: {
+      backgroundColor: '#10B981',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      borderRadius: 12,
+      marginTop: 16,
+    },
+    actionButtonText: {
+      marginLeft: 8,
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
   });
+
+  const visit = visits.find(v => v.id === id);
+  const caregiver = caregivers.find(c => c.id === visit?.caregiverId);
+
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return {
+          icon: <CircleCheck size={16} color="#10B981" />,
+          text: 'Effectuée',
+          color: '#10B981',
+          bgColor: '#D1FAE5',
+        };
+      case 'in-progress':
+        return {
+          icon: <Play size={16} color="#3B82F6" />,
+          text: 'En cours',
+          color: '#3B82F6',
+          bgColor: '#DBEAFE',
+        };
+      case 'scheduled':
+        return {
+          icon: <Clock size={16} color="#F59E0B" />,
+          text: 'Programmée',
+          color: '#F59E0B',
+          bgColor: '#FEF3C7',
+        };
+      case 'cancelled':
+        return {
+          icon: <AlertTriangle size={16} color="#EF4444" />,
+          text: 'Annulée',
+          color: '#EF4444',
+          bgColor: '#FEE2E2',
+        };
+      default:
+        return {
+          icon: <Circle size={16} color="#6B7280" />,
+          text: 'Inconnue',
+          color: '#6B7280',
+          bgColor: '#F3F4F6',
+        };
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const toggleTask = (task: string) => {
+    setCompletedTasks(prev => 
+      prev.includes(task) 
+        ? prev.filter(t => t !== task)
+        : [...prev, task]
+    );
+  };
+
+  const handleCheckIn = () => {
+    updateVisitStatus(visit.id, 'in-progress');
+    Alert.alert('Intervention commencée', 'Vous avez commencé l\'intervention.');
+  };
+
+  const handleCheckOut = () => {
+    setShowCheckout(true);
+  };
+
+  const handleCompleteVisit = () => {
+    if (completedTasks.length === 0) {
+      Alert.alert('Attention', 'Veuillez cocher au moins une tâche effectuée.');
+      return;
+    }
+    
+    updateVisitStatus(visit.id, 'completed');
+    Alert.alert('Intervention terminée', 'L\'intervention a été marquée comme terminée.');
+    router.back();
+  };
+
+  if (!visit || !caregiver) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color="#3B82F6" />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Détail du rendez-vous</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: colors.text }}>Rendez-vous non trouvé</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const statusInfo = getStatusInfo(visit.status);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -100,6 +324,7 @@ export default function AppointmentDetail() {
       <ScrollView style={styles.scrollView}>
         <View style={[styles.statusCard, { backgroundColor: colors.surface }]}>
           <View style={[styles.statusBadge, { backgroundColor: statusInfo.bgColor }]}>
+            {statusInfo.icon}
             <Text style={[styles.statusText, { color: statusInfo.color }]}>
               {statusInfo.text}
             </Text>

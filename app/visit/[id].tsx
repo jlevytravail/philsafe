@@ -252,24 +252,7 @@ export default function VisitDetail() {
   const visit = visits.find(v => v.id === id);
   const caregiver = caregivers.find(c => c.id === visit?.caregiverId);
 
-  if (!visit || !caregiver) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={24} color="#3B82F6" />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Détail de la visite</Text>
-          <View style={styles.headerRight} />
-        </View>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: colors.text }}>Visite non trouvée</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const getStatusInfo = (status) => {
+  const getStatusInfo = (status: string) => {
     switch (status) {
       case 'completed':
         return {
@@ -304,7 +287,7 @@ export default function VisitDetail() {
 
   const statusInfo = getStatusInfo(visit.status);
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
       weekday: 'long',
@@ -318,6 +301,23 @@ export default function VisitDetail() {
     updateVisitStatus(visit.id, 'completed');
     router.back();
   };
+
+  if (!visit || !caregiver) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color="#3B82F6" />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Détail de la visite</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: colors.text }}>Visite non trouvée</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
