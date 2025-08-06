@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Clock, User, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Circle, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { Visit, Caregiver } from '@/types';
 import { router } from 'expo-router';
+import { useThemeContext } from '@/context/ThemeContext';
 
 interface VisitCardProps {
   visit: Visit;
@@ -10,6 +11,8 @@ interface VisitCardProps {
 }
 
 export default function VisitCard({ visit, caregiver }: VisitCardProps) {
+  const { colors } = useThemeContext();
+
   const getStatusColor = (status: Visit['status']) => {
     switch (status) {
       case 'completed':
@@ -68,9 +71,103 @@ export default function VisitCard({ visit, caregiver }: VisitCardProps) {
 
   const visitIsLate = isVisitLate();
 
+  const styles = StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      shadowColor: colors.shadow,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    lateCard: {
+      borderLeftWidth: 4,
+      borderLeftColor: '#EF4444',
+    },
+    lateIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#FEF2F2',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      alignSelf: 'flex-start',
+      marginBottom: 8,
+    },
+    lateText: {
+      marginLeft: 4,
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#EF4444',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    timeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    time: {
+      marginLeft: 4,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    statusContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    status: {
+      marginLeft: 4,
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    caregiverContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    caregiverName: {
+      marginLeft: 4,
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    caregiverRole: {
+      marginLeft: 4,
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    careTypeContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    careTypeBadge: {
+      backgroundColor: colors.primaryLight,
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+    },
+    careTypeText: {
+      fontSize: 12,
+      color: colors.primary,
+      fontWeight: '500',
+    },
+  });
+
   return (
     <TouchableOpacity style={[
-      styles.card,
+      [styles.card, { backgroundColor: colors.surface }],
       visitIsLate && styles.lateCard
     ]} onPress={handlePress}>
       {visitIsLate && (
@@ -94,111 +191,17 @@ export default function VisitCard({ visit, caregiver }: VisitCardProps) {
       
       <View style={styles.caregiverContainer}>
         <User size={16} color="#6B7280" />
-        <Text style={styles.caregiverName}>{caregiver.name}</Text>
-        <Text style={styles.caregiverRole}>• {caregiver.role}</Text>
+        <Text style={[styles.caregiverName, { color: colors.text }]}>{caregiver.name}</Text>
+        <Text style={[styles.caregiverRole, { color: colors.textSecondary }]}>• {caregiver.role}</Text>
       </View>
       
       <View style={styles.careTypeContainer}>
         {visit.careType.map((type, index) => (
-          <View key={index} style={styles.careTypeBadge}>
-            <Text style={styles.careTypeText}>{type}</Text>
+          <View key={index} style={[styles.careTypeBadge, { backgroundColor: colors.primaryLight }]}>
+            <Text style={[styles.careTypeText, { color: colors.primary }]}>{type}</Text>
           </View>
         ))}
       </View>
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  lateCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#EF4444',
-  },
-  lateIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  lateText: {
-    marginLeft: 4,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#EF4444',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  time: {
-    marginLeft: 4,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  status: {
-    marginLeft: 4,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  caregiverContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  caregiverName: {
-    marginLeft: 4,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  caregiverRole: {
-    marginLeft: 4,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  careTypeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  careTypeBadge: {
-    backgroundColor: '#EBF8FF',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  careTypeText: {
-    fontSize: 12,
-    color: '#3B82F6',
-    fontWeight: '500',
-  },
-});

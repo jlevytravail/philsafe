@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Calendar, Clock } from 'lucide-react-native';
 import { Caregiver } from '@/types';
 import { useVisits } from '@/context/VisitContext';
+import { useThemeContext } from '@/context/ThemeContext';
 
 interface WeekPreviewProps {
   caregivers: Caregiver[];
 }
 
 export default function WeekPreview({ caregivers }: WeekPreviewProps) {
+  const { colors } = useThemeContext();
   const { visits } = useVisits();
 
   const getUpcomingDays = () => {
@@ -41,18 +43,91 @@ export default function WeekPreview({ caregivers }: WeekPreviewProps) {
 
   const upcomingDays = getUpcomingDays();
 
+  const styles = StyleSheet.create({
+    container: {
+      marginTop: 24,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    title: {
+      marginLeft: 8,
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    scrollView: {
+      paddingLeft: 16,
+    },
+    dayCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 12,
+      marginRight: 12,
+      minWidth: 120,
+      shadowColor: colors.shadow,
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    dayName: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      textTransform: 'uppercase',
+      fontWeight: '500',
+    },
+    dayNumber: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    visitInfo: {
+      marginBottom: 6,
+    },
+    timeInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 2,
+    },
+    visitTime: {
+      marginLeft: 4,
+      fontSize: 10,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    caregiverName: {
+      fontSize: 11,
+      color: colors.textSecondary,
+      fontWeight: '500',
+    },
+    noVisits: {
+      fontSize: 11,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      fontStyle: 'italic',
+    },
+  });
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Calendar size={20} color="#3B82F6" />
-        <Text style={styles.title}>Prochaines visites</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Prochaines visites</Text>
       </View>
       
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollView}>
         {upcomingDays.map((day, index) => (
-          <View key={index} style={styles.dayCard}>
-            <Text style={styles.dayName}>{day.dayName}</Text>
-            <Text style={styles.dayNumber}>{day.dayNumber}</Text>
+          <View key={index} style={[styles.dayCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.dayName, { color: colors.textSecondary }]}>{day.dayName}</Text>
+            <Text style={[styles.dayNumber, { color: colors.text }]}>{day.dayNumber}</Text>
             
             {day.visits.length > 0 ? (
               day.visits.map((visit, visitIndex) => {
@@ -60,15 +135,15 @@ export default function WeekPreview({ caregivers }: WeekPreviewProps) {
                 return (
                   <View key={visitIndex} style={styles.visitInfo}>
                     <View style={styles.timeInfo}>
-                      <Clock size={10} color="#6B7280" />
-                      <Text style={styles.visitTime}>{visit.startTime}</Text>
+                      <Clock size={10} color={colors.textTertiary} />
+                      <Text style={[styles.visitTime, { color: colors.textSecondary }]}>{visit.startTime}</Text>
                     </View>
-                    <Text style={styles.caregiverName}>{caregiver?.name}</Text>
+                    <Text style={[styles.caregiverName, { color: colors.textSecondary }]}>{caregiver?.name}</Text>
                   </View>
                 );
               })
             ) : (
-              <Text style={styles.noVisits}>Aucune visite</Text>
+              <Text style={[styles.noVisits, { color: colors.textTertiary }]}>Aucune visite</Text>
             )}
           </View>
         ))}
@@ -76,89 +151,3 @@ export default function WeekPreview({ caregivers }: WeekPreviewProps) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginTop: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    marginLeft: 8,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  scrollView: {
-    paddingLeft: 16,
-  },
-  dayCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 12,
-    minWidth: 120,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  dayName: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    fontWeight: '500',
-  },
-  dayNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  visitInfo: {
-    marginBottom: 6,
-  },
-  timeInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  visitTime: {
-    marginLeft: 4,
-    fontSize: 10,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  caregiverName: {
-    fontSize: 11,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  noVisits: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  visitCount: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  visitCountText: {
-    fontSize: 10,
-    color: '#3B82F6',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-});

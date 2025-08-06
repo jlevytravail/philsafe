@@ -2,12 +2,15 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, Activity, Pill } from 'lucide-react-native';
 import { Event } from '@/types';
+import { useThemeContext } from '@/context/ThemeContext';
 
 interface EventCardProps {
   event: Event;
 }
 
 export default function EventCard({ event }: EventCardProps) {
+  const { colors } = useThemeContext();
+
   const getEventIcon = (type: Event['type']) => {
     switch (type) {
       case 'check-in':
@@ -45,52 +48,52 @@ export default function EventCard({ event }: EventCardProps) {
     }
   };
 
+  const styles = StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      backgroundColor: colors.surfaceSecondary,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
+    },
+    iconContainer: {
+      marginRight: 12,
+      justifyContent: 'center',
+    },
+    content: {
+      flex: 1,
+    },
+    message: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: '500',
+      marginBottom: 4,
+    },
+    timeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    time: {
+      marginLeft: 4,
+      fontSize: 12,
+      color: colors.textTertiary,
+    },
+  });
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: colors.surfaceSecondary, borderLeftColor: colors.primary }]}>
       <View style={styles.iconContainer}>
         {getEventIcon(event.type)}
       </View>
       <View style={styles.content}>
-        <Text style={styles.message}>{event.message}</Text>
+        <Text style={[styles.message, { color: colors.textSecondary }]}>{event.message}</Text>
         <View style={styles.timeContainer}>
-          <Clock size={12} color="#9CA3AF" />
-          <Text style={styles.time}>{formatTime(event.timestamp)}</Text>
+          <Clock size={12} color={colors.textTertiary} />
+          <Text style={[styles.time, { color: colors.textTertiary }]}>{formatTime(event.timestamp)}</Text>
         </View>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#3B82F6',
-  },
-  iconContainer: {
-    marginRight: 12,
-    justifyContent: 'center',
-  },
-  content: {
-    flex: 1,
-  },
-  message: {
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  time: {
-    marginLeft: 4,
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-});
