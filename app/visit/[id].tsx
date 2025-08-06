@@ -170,6 +170,155 @@ export default function VisitDetail() {
       borderRadius: 12,
       padding: 20,
       marginBottom: 16,
+      shadowColor: colors.shadow,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    careTypesList: {
+      marginBottom: 16,
+    },
+    careTypeItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    careTypeText: {
+      marginLeft: 8,
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    notesSection: {
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      paddingTop: 16,
+    },
+    notesTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      marginBottom: 8,
+    },
+    notesText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      lineHeight: 24,
+    },
+    patientCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 20,
+      marginBottom: 16,
+      shadowColor: colors.shadow,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    patientTitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    patientName: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    completeButton: {
+      backgroundColor: colors.primary,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      borderRadius: 12,
+      marginBottom: 16,
+    },
+    completeButtonText: {
+      marginLeft: 8,
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+  });
+
+  const visit = visits.find(v => v.id === id);
+  const caregiver = caregivers.find(c => c.id === visit?.caregiverId);
+
+  if (!visit || !caregiver) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft size={24} color="#3B82F6" />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Détail de la visite</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: colors.text }}>Visite non trouvée</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const getStatusInfo = (status) => {
+    switch (status) {
+      case 'completed':
+        return {
+          icon: <CheckCircle size={16} color="#10B981" />,
+          text: 'Effectuée',
+          color: '#10B981',
+          bgColor: '#D1FAE5',
+        };
+      case 'scheduled':
+        return {
+          icon: <Clock size={16} color="#F59E0B" />,
+          text: 'Programmée',
+          color: '#F59E0B',
+          bgColor: '#FEF3C7',
+        };
+      case 'cancelled':
+        return {
+          icon: <AlertTriangle size={16} color="#EF4444" />,
+          text: 'Annulée',
+          color: '#EF4444',
+          bgColor: '#FEE2E2',
+        };
+      default:
+        return {
+          icon: <Circle size={16} color="#6B7280" />,
+          text: 'Inconnue',
+          color: '#6B7280',
+          bgColor: '#F3F4F6',
+        };
+    }
+  };
+
+  const statusInfo = getStatusInfo(visit.status);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const handleMarkAsCompleted = () => {
+    updateVisitStatus(visit.id, 'completed');
+    router.back();
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
