@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, ChevronLeft, ChevronRight, Clock, User, Plus, Home } from 'lucide-react-native';
+import { Calendar, ChevronLeft, ChevronRight, Clock, User, Plus, Chrome as Home } from 'lucide-react-native';
 import { caregivers } from '@/data/mockData';
 import { useVisits } from '@/context/VisitContext';
 import { router } from 'expo-router';
