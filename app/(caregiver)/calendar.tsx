@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, ChevronLeft, ChevronRight, Clock, User, CheckCircle, AlertCircle } from 'lucide-react-native';
+import { Calendar, ChevronLeft, ChevronRight, Clock, User, CircleCheck as CheckCircle, CircleAlert as AlertCircle } from 'lucide-react-native';
 import { useVisits } from '@/context/VisitContext';
 import { caregivers } from '@/data/mockData';
 import { router } from 'expo-router';
