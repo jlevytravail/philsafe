@@ -1,32 +1,43 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, User, Bell, Heart, Phone, Mail, Shield, CircleHelp as HelpCircle, ChevronRight, TestTube } from 'lucide-react-native';
-import { Users, UserCheck } from 'lucide-react-native';
-import NotificationService from '@/utils/notifications';
-import { Notification } from '@/types';
+import { Settings, User, Bell, Heart, Phone, Mail, Shield, CircleHelp as HelpCircle, ChevronRight, Users, UserCheck } from 'lucide-react-native';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useRole } from '@/context/RoleContext';
 import ThemeToggle from '@/components/ThemeToggle';
 
-export default function SettingsScreen() {
+export default function CaregiverSettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [emergencyAlertsEnabled, setEmergencyAlertsEnabled] = React.useState(true);
   const { colors } = useThemeContext();
   const { role, setRole } = useRole();
 
-  const triggerTestNotification = () => {
-    const testNotification: Notification = {
-      id: Date.now().toString(),
-      title: 'Test de notification',
-      message: 'Marie Dubois vient d\'arriver chez Mme Dupont pour les soins du matin',
-      timestamp: new Date().toISOString(),
-      type: 'info',
-      read: false
-    };
-    
-    NotificationService.getInstance().simulateNotification(testNotification);
-  };
+  const SettingItem = ({ 
+    icon, 
+    title, 
+    subtitle, 
+    onPress, 
+    rightElement 
+  }: {
+    icon: React.ReactNode;
+    title: string;
+    subtitle?: string;
+    onPress?: () => void;
+    rightElement?: React.ReactNode;
+  }) => (
+    <TouchableOpacity style={[styles.settingItem, { borderBottomColor: colors.borderLight }]} onPress={onPress}>
+      <View style={styles.settingLeft}>
+        <View style={[styles.iconContainer, { backgroundColor: colors.surfaceSecondary }]}>
+          {icon}
+        </View>
+        <View style={styles.settingContent}>
+          <Text style={[styles.settingTitle, { color: colors.text }]}>{title}</Text>
+          {subtitle && <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
+        </View>
+      </View>
+      {rightElement || <ChevronRight size={20} color="#9CA3AF" />}
+    </TouchableOpacity>
+  );
 
   const RoleSelector = () => (
     <View style={[styles.roleSelector, { backgroundColor: colors.surface }]}>
@@ -67,33 +78,6 @@ export default function SettingsScreen() {
         </TouchableOpacity>
       </View>
     </View>
-  );
-
-  const SettingItem = ({ 
-    icon, 
-    title, 
-    subtitle, 
-    onPress, 
-    rightElement 
-  }: {
-    icon: React.ReactNode;
-    title: string;
-    subtitle?: string;
-    onPress?: () => void;
-    rightElement?: React.ReactNode;
-  }) => (
-    <TouchableOpacity style={styles.settingItem} onPress={onPress}>
-      <View style={styles.settingLeft}>
-        <View style={styles.iconContainer}>
-          {icon}
-        </View>
-        <View style={styles.settingContent}>
-          <Text style={styles.settingTitle}>{title}</Text>
-          {subtitle && <Text style={[styles.settingSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
-        </View>
-      </View>
-      {rightElement || <ChevronRight size={20} color="#9CA3AF" />}
-    </TouchableOpacity>
   );
 
   const styles = StyleSheet.create({
@@ -141,7 +125,6 @@ export default function SettingsScreen() {
       paddingHorizontal: 20,
       paddingVertical: 16,
       borderBottomWidth: 1,
-      borderBottomColor: colors.borderLight,
     },
     settingLeft: {
       flexDirection: 'row',
@@ -152,7 +135,6 @@ export default function SettingsScreen() {
       width: 40,
       height: 40,
       borderRadius: 20,
-      backgroundColor: colors.surfaceSecondary,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 12,
@@ -167,6 +149,20 @@ export default function SettingsScreen() {
     settingSubtitle: {
       fontSize: 14,
       marginTop: 2,
+    },
+    themeSection: {
+      backgroundColor: colors.surface,
+      marginTop: 16,
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+    },
+    themeSectionTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textTertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: 16,
     },
     roleSelector: {
       marginTop: 16,
@@ -210,20 +206,6 @@ export default function SettingsScreen() {
       color: '#FFFFFF',
       fontWeight: '600',
     },
-    themeSection: {
-      backgroundColor: colors.surface,
-      marginTop: 16,
-      paddingVertical: 16,
-      paddingHorizontal: 20,
-    },
-    themeSectionTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textTertiary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-      marginBottom: 16,
-    },
     footer: {
       padding: 20,
       alignItems: 'center',
@@ -241,6 +223,7 @@ export default function SettingsScreen() {
       textAlign: 'center',
     },
   });
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -253,17 +236,17 @@ export default function SettingsScreen() {
       <ScrollView style={styles.scrollView}>
         <RoleSelector />
 
-        <View style={styles.themeSection}>
-          <Text style={styles.themeSectionTitle}>Apparence</Text>
+        <View style={[styles.themeSection, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.themeSectionTitle, { color: colors.textTertiary }]}>Apparence</Text>
           <ThemeToggle />
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Profil</Text>
           <SettingItem
             icon={<User size={20} color="#6B7280" />}
-            title="Claire Martin"
-            subtitle="Proche aidante de Mme Dupont"
+            title="Marie Dubois"
+            subtitle="Aide-soignante"
           />
           <SettingItem
             icon={<Phone size={20} color="#6B7280" />}
@@ -273,11 +256,11 @@ export default function SettingsScreen() {
           <SettingItem
             icon={<Mail size={20} color="#6B7280" />}
             title="Email"
-            subtitle="claire.martin@email.com"
+            subtitle="marie.dubois@soins.fr"
           />
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Notifications</Text>
           <SettingItem
             icon={<Bell size={20} color="#6B7280" />}
@@ -307,7 +290,7 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Sécurité et confidentialité</Text>
           <SettingItem
             icon={<Shield size={20} color="#6B7280" />}
@@ -316,14 +299,8 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Support</Text>
-          <SettingItem
-            icon={<TestTube size={20} color="#6B7280" />}
-            title="Déclencher notification test"
-            subtitle="Tester les notifications push"
-            onPress={triggerTestNotification}
-          />
           <SettingItem
             icon={<HelpCircle size={20} color="#6B7280" />}
             title="Centre d'aide"
@@ -339,7 +316,7 @@ export default function SettingsScreen() {
         <View style={styles.footer}>
           <Text style={[styles.appVersion, { color: colors.textTertiary }]}>PhilSafe v1.0.0</Text>
           <Text style={[styles.footerText, { color: colors.textTertiary }]}>
-            Développé avec ❤️ pour les proches aidants
+            Développé avec ❤️ pour les professionnels de santé
           </Text>
         </View>
       </ScrollView>

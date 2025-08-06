@@ -25,7 +25,8 @@ export function getInitialVisits(): Visit[] {
       status: 'completed',
       careType: ['Toilette', 'Prise de médicaments'],
       notes: 'Toilette réalisée sans difficulté. Médicaments pris correctement. Mme Dupont en forme.',
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     {
       id: '2',
@@ -36,7 +37,8 @@ export function getInitialVisits(): Visit[] {
       status: 'completed',
       careType: ['Soins infirmiers', 'Pansement'],
       notes: 'Pansement changé. Cicatrisation en bonne voie.',
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     
     // Visites d'aujourd'hui
@@ -49,7 +51,8 @@ export function getInitialVisits(): Visit[] {
       status: 'completed',
       careType: ['Toilette', 'Prise de médicaments'],
       notes: 'Toilette réalisée. Médicaments administrés selon prescription.',
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     {
       id: '4',
@@ -59,7 +62,8 @@ export function getInitialVisits(): Visit[] {
       endTime: '11:00',
       status: 'scheduled', // En retard si l'heure actuelle > 10:00
       careType: ['Soins infirmiers', 'Contrôle tension'],
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     {
       id: '5',
@@ -69,7 +73,8 @@ export function getInitialVisits(): Visit[] {
       endTime: '19:00',
       status: 'scheduled',
       careType: ['Aide aux repas', 'Compagnie'],
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     
     // Visites de demain
@@ -81,7 +86,8 @@ export function getInitialVisits(): Visit[] {
       endTime: '09:30',
       status: 'scheduled',
       careType: ['Toilette', 'Prise de médicaments'],
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     {
       id: '7',
@@ -91,7 +97,8 @@ export function getInitialVisits(): Visit[] {
       endTime: '15:00',
       status: 'scheduled',
       careType: ['Soins infirmiers', 'Pansement'],
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     {
       id: '8',
@@ -101,7 +108,8 @@ export function getInitialVisits(): Visit[] {
       endTime: '19:00',
       status: 'scheduled',
       careType: ['Aide aux repas', 'Compagnie'],
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     
     // Visites d'après-demain
@@ -113,7 +121,8 @@ export function getInitialVisits(): Visit[] {
       endTime: '09:30',
       status: 'scheduled',
       careType: ['Toilette', 'Prise de médicaments'],
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     },
     {
       id: '10',
@@ -123,7 +132,8 @@ export function getInitialVisits(): Visit[] {
       endTime: '15:00',
       status: 'scheduled',
       careType: ['Soins infirmiers'],
-      patientName: 'Mme Dupont'
+      patientName: 'Mme Dupont',
+      address: '15 rue des Lilas, 75001 Paris'
     }
   ];
 }

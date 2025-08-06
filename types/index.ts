@@ -16,6 +16,7 @@ export interface Visit {
   careType: string[];
   notes?: string;
   patientName: string;
+  address?: string;
 }
 
 export interface Event {
