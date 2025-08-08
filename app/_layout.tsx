@@ -8,12 +8,12 @@ import { VisitProvider } from '@/context/VisitContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 
-function AppContent() {
+function RootNavigationLogic() {
   const { session, role, isLoading } = useAuth();
   const rootNavigationState = useRootNavigationState();
 
   useEffect(() => {
-    if (!isLoading && rootNavigationState?.isLoaded) {
+    if (!isLoading && rootNavigationState?.key) {
       if (!session) {
         // Pas de session, rediriger vers l'authentification
         setTimeout(() => router.replace('/auth'), 0);
@@ -26,9 +26,9 @@ function AppContent() {
         }
       }
     }
-  }, [session, role, isLoading, rootNavigationState?.isLoaded]);
+  }, [session, role, isLoading, rootNavigationState?.key]);
 
-  if (isLoading || !rootNavigationState?.isLoaded) {
+  if (isLoading || !rootNavigationState?.key) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#3B82F6" />
@@ -57,7 +57,7 @@ export default function RootLayout() {
       <ThemeProvider>
         <VisitProvider>
           <>
-            <AppContent />
+            <RootNavigationLogic />
             <StatusBar style="auto" />
           </>
         </VisitProvider>
