@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import Toast from 'react-native-toast-message';
@@ -12,16 +12,19 @@ import { router } from 'expo-router';
 function AuthNavigator() {
   const { session, profile, loading } = useAuth();
   const [initializing, setInitializing] = useState(true);
+  const rootNavigationState = useRootNavigationState();
+  const isNavigationReady = rootNavigationState?.key != null;
 
   useEffect(() => {
     console.log('AuthNavigator - State:', { 
       hasSession: !!session, 
       profileRole: profile?.role, 
-      loading 
+      loading,
+      isNavigationReady
     });
 
-    // Attendre que l'authentification soit initialisée
-    if (!loading) {
+    // Attendre que l'authentification et la navigation soient initialisées
+    if (!loading && isNavigationReady) {
       setInitializing(false);
       
       // Navigation conditionnelle basée sur l'état d'authentification
@@ -43,10 +46,10 @@ function AuthNavigator() {
         router.replace('/auth');
       }
     }
-  }, [session, profile, loading]);
+  }, [session, profile, loading, isNavigationReady]);
 
   // Afficher un écran de chargement pendant l'initialisation
-  if (initializing || loading) {
+  if (initializing || loading || !isNavigationReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3B82F6" />
