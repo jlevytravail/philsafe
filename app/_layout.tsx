@@ -13,7 +13,7 @@ function RootNavigationLogic() {
   const rootNavigationState = useRootNavigationState();
 
   useEffect(() => {
-    if (!isLoading && rootNavigationState?.key) {
+    if (!isLoading && rootNavigationState?.stale === false) {
       if (!session) {
         // Pas de session, rediriger vers l'authentification
         setTimeout(() => router.replace('/auth'), 0);
@@ -26,9 +26,9 @@ function RootNavigationLogic() {
         }
       }
     }
-  }, [session, role, isLoading, rootNavigationState?.key]);
+  }, [session, role, isLoading, rootNavigationState?.stale]);
 
-  if (isLoading || !rootNavigationState?.key) {
+  if (isLoading || rootNavigationState?.stale !== false) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#3B82F6" />
