@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { router } from 'expo-router';
+import { router, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
@@ -10,9 +10,10 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 function AppContent() {
   const { session, role, isLoading } = useAuth();
+  const rootNavigationState = useRootNavigationState();
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && rootNavigationState?.isLoaded) {
       if (!session) {
         // Pas de session, rediriger vers l'authentification
         router.replace('/auth');
@@ -25,9 +26,9 @@ function AppContent() {
         }
       }
     }
-  }, [session, role, isLoading]);
+  }, [session, role, isLoading, rootNavigationState?.isLoaded]);
 
-  if (isLoading) {
+  if (isLoading || !rootNavigationState?.isLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#3B82F6" />
