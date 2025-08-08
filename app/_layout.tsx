@@ -6,21 +6,26 @@ import { View, ActivityIndicator } from 'react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { VisitProvider } from '@/context/VisitContext';
 import { ThemeProvider } from '@/context/ThemeContext';
-import { RoleProvider, useRole } from '@/context/RoleContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 function AppContent() {
-  const { role, isLoading } = useRole();
+  const { session, role, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
-      // Force navigation to the correct interface based on role
-      if (role === 'family') {
-        router.replace('/(tabs)');
-      } else if (role === 'caregiver') {
-        router.replace('/(caregiver)');
+      if (!session) {
+        // Pas de session, rediriger vers l'authentification
+        router.replace('/auth');
+      } else if (role) {
+        // Session active et rôle défini, rediriger vers l'interface appropriée
+        if (role === 'aidant') {
+          router.replace('/(tabs)');
+        } else if (role === 'intervenant') {
+          router.replace('/(caregiver)');
+        }
       }
     }
-  }, [role, isLoading]);
+  }, [session, role, isLoading]);
 
   if (isLoading) {
     return (
@@ -32,7 +37,8 @@ function AppContent() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {role === 'family' ? (
+      <Stack.Screen name="auth" />
+      {role === 'aidant' ? (
         <Stack.Screen name="(tabs)" />
       ) : (
         <Stack.Screen name="(caregiver)" />
@@ -46,7 +52,7 @@ export default function RootLayout() {
   useFrameworkReady();
 
   return (
-    <RoleProvider>
+    <AuthProvider>
       <ThemeProvider>
         <VisitProvider>
           <>
@@ -55,6 +61,6 @@ export default function RootLayout() {
           </>
         </VisitProvider>
       </ThemeProvider>
-    </RoleProvider>
+    </AuthProvider>
   );
 }

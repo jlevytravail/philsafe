@@ -2,18 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Settings, User, Bell, Heart, Phone, Mail, Shield, CircleHelp as HelpCircle, ChevronRight, TestTube } from 'lucide-react-native';
-import { Users, UserCheck } from 'lucide-react-native';
+import { Users, UserCheck, LogOut } from 'lucide-react-native';
 import NotificationService from '@/utils/notifications';
 import { Notification } from '@/types';
 import { useThemeContext } from '@/context/ThemeContext';
-import { useRole } from '@/context/RoleContext';
+import { useAuth } from '@/context/AuthContext';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [emergencyAlertsEnabled, setEmergencyAlertsEnabled] = React.useState(true);
   const { colors } = useThemeContext();
-  const { role, setRole } = useRole();
+  const { profile, role, signOut, updateProfile } = useAuth();
 
   const triggerTestNotification = () => {
     const testNotification: Notification = {
@@ -28,6 +28,17 @@ export default function SettingsScreen() {
     NotificationService.getInstance().simulateNotification(testNotification);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const handleRoleUpdate = async (newRole: 'intervenant' | 'aidant') => {
+    const { error } = await updateProfile({ role: newRole });
+    if (error) {
+      console.error('Erreur lors de la mise à jour du rôle:', error);
+    }
+  };
+
   const RoleSelector = () => (
     <View style={[styles.roleSelector, { backgroundColor: colors.surface }]}>
       <Text style={[styles.roleSelectorTitle, { color: colors.textTertiary }]}>Interface utilisateur</Text>
@@ -35,34 +46,34 @@ export default function SettingsScreen() {
         <TouchableOpacity
           style={[
             styles.roleOption,
-            role === 'family' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
+            role === 'aidant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
           ]}
-          onPress={() => setRole('family')}
+          onPress={() => handleRoleUpdate('aidant')}
         >
-          <Users size={16} color={role === 'family' ? '#FFFFFF' : colors.textTertiary} />
+          <Users size={16} color={role === 'aidant' ? '#FFFFFF' : colors.textTertiary} />
           <Text style={[
             styles.roleOptionText,
             { color: colors.textTertiary },
-            role === 'family' && styles.activeRoleOptionText
+            role === 'aidant' && styles.activeRoleOptionText
           ]}>
-            Famille
+            Proche aidant
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
           style={[
             styles.roleOption,
-            role === 'caregiver' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
+            role === 'intervenant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
           ]}
-          onPress={() => setRole('caregiver')}
+          onPress={() => handleRoleUpdate('intervenant')}
         >
-          <UserCheck size={16} color={role === 'caregiver' ? '#FFFFFF' : colors.textTertiary} />
+          <UserCheck size={16} color={role === 'intervenant' ? '#FFFFFF' : colors.textTertiary} />
           <Text style={[
             styles.roleOptionText,
             { color: colors.textTertiary },
-            role === 'caregiver' && styles.activeRoleOptionText
+            role === 'intervenant' && styles.activeRoleOptionText
           ]}>
-            Soignant
+            Professionnel de santé
           </Text>
         </TouchableOpacity>
       </View>
@@ -262,18 +273,18 @@ export default function SettingsScreen() {
           <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Profil</Text>
           <SettingItem
             icon={<User size={20} color="#6B7280" />}
-            title="Claire Martin"
-            subtitle="Proche aidante de Mme Dupont"
+            title={profile?.full_name || 'Utilisateur'}
+            subtitle={role === 'aidant' ? 'Proche aidant' : 'Professionnel de santé'}
           />
           <SettingItem
             icon={<Phone size={20} color="#6B7280" />}
             title="Téléphone"
-            subtitle="06 12 34 56 78"
+            subtitle={profile?.phone_number || 'Non renseigné'}
           />
           <SettingItem
             icon={<Mail size={20} color="#6B7280" />}
             title="Email"
-            subtitle="claire.martin@email.com"
+            subtitle={profile?.email || 'Non renseigné'}
           />
         </View>
 
@@ -333,6 +344,16 @@ export default function SettingsScreen() {
             icon={<Phone size={20} color="#6B7280" />}
             title="Contacter le support"
             subtitle="Assistance téléphonique 24h/7j"
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>Compte</Text>
+          <SettingItem
+            icon={<LogOut size={20} color="#EF4444" />}
+            title="Se déconnecter"
+            subtitle="Fermer la session"
+            onPress={handleSignOut}
           />
         </View>
 
