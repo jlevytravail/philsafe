@@ -16,13 +16,13 @@ function AppContent() {
     if (!isLoading && rootNavigationState?.isLoaded) {
       if (!session) {
         // Pas de session, rediriger vers l'authentification
-        router.replace('/auth');
+        setTimeout(() => router.replace('/auth'), 0);
       } else if (role) {
         // Session active et rôle défini, rediriger vers l'interface appropriée
         if (role === 'aidant') {
-          router.replace('/(tabs)');
+          setTimeout(() => router.replace('/(tabs)'), 0);
         } else if (role === 'intervenant') {
-          router.replace('/(caregiver)');
+          setTimeout(() => router.replace('/(caregiver)'), 0);
         }
       }
     }
