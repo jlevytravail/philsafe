@@ -8,7 +8,7 @@ import { VisitProvider } from '@/context/VisitContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 
-function RootNavigationLogic() {
+function AuthRedirector() {
   const { session, role, isLoading } = useAuth();
   const rootNavigationState = useRootNavigationState();
 
@@ -36,17 +36,7 @@ function RootNavigationLogic() {
     );
   }
 
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="auth" />
-      {role === 'aidant' ? (
-        <Stack.Screen name="(tabs)" />
-      ) : (
-        <Stack.Screen name="(caregiver)" />
-      )}
-      <Stack.Screen name="+not-found" />
-    </Stack>
-  );
+  return null;
 }
 
 export default function RootLayout() {
@@ -57,7 +47,13 @@ export default function RootLayout() {
       <ThemeProvider>
         <VisitProvider>
           <>
-            <RootNavigationLogic />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="auth" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(caregiver)" />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <AuthRedirector />
             <StatusBar style="auto" />
           </>
         </VisitProvider>
