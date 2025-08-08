@@ -27,15 +27,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Récupérer la session initiale
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserProfile(session.user.id);
-      } else {
+    const getInitialSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await loadUserProfile(session.user.id);
+        } else {
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Erreur lors de la récupération de la session:', error);
         setIsLoading(false);
       }
-    });
+    };
+
+    getInitialSession();
 
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -57,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserProfile = async (userId: string) => {
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('users')
         .select('*')
