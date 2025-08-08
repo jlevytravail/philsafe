@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { VisitProvider } from '@/context/VisitContext';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -13,23 +14,33 @@ function AuthNavigator() {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
+    console.log('AuthNavigator - State:', { 
+      hasSession: !!session, 
+      profileRole: profile?.role, 
+      loading 
+    });
+
     // Attendre que l'authentification soit initialisée
     if (!loading) {
       setInitializing(false);
       
       // Navigation conditionnelle basée sur l'état d'authentification
       if (!session) {
-        // Pas de session, rediriger vers login
-        router.replace('/login');
+        // Pas de session, rediriger vers auth
+        console.log('No session, redirecting to auth');
+        router.replace('/auth');
       } else if (profile?.role === 'aidant') {
         // Utilisateur aidant, rediriger vers l'interface aidant
+        console.log('Aidant role, redirecting to tabs');
         router.replace('/(tabs)');
       } else if (profile?.role === 'intervenant') {
         // Utilisateur intervenant, rediriger vers l'interface intervenant
+        console.log('Intervenant role, redirecting to caregiver');
         router.replace('/(caregiver)');
       } else if (profile && !profile.role) {
-        // Profil existe mais pas de rôle défini, rediriger vers login pour reconfiguration
-        router.replace('/login');
+        // Profil existe mais pas de rôle défini, rediriger vers auth pour reconfiguration
+        console.log('Profile exists but no role, redirecting to auth');
+        router.replace('/auth');
       }
     }
   }, [session, profile, loading]);
@@ -45,6 +56,7 @@ function AuthNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="auth" />
       <Stack.Screen name="login" />
       <Stack.Screen name="signup" />
       <Stack.Screen name="(tabs)" />
@@ -65,6 +77,7 @@ export default function RootLayout() {
           <>
             <AuthNavigator />
             <StatusBar style="auto" />
+            <Toast />
           </>
         </VisitProvider>
       </AuthProvider>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, Database } from '@/utils/supabase';
+import Toast from 'react-native-toast-message';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
 
@@ -11,10 +12,12 @@ interface AuthContextType {
   role: 'aidant' | 'intervenant' | null;
   loading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<{ error?: any }>;
-  signUp: (email: string, password: string, fullName: string, role: 'aidant' | 'intervenant') => Promise<{ error?: any }>;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, fullName: string, role: 'aidant' | 'intervenant') => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error?: any }>;
+  resetPasswordForEmail: (email: string) => Promise<{ error?: string }>;
+  signInWithOAuth: (provider: 'google' | 'apple' | 'facebook') => Promise<{ error?: string }>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error?: string }>;
   clearError: () => void;
 }
 
@@ -28,20 +31,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     // Récupérer la session initiale
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
+        if (error) {
+          console.error('Erreur lors de la récupération de la session:', error);
+          setError('Erreur lors de l\'initialisation de la session');
+          setLoading(false);
+          return;
+        }
+
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          await fetchUserProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!mounted) return;
+        console.error('Erreur inattendue lors de l\'initialisation:', err);
+        setError('Erreur lors de l\'initialisation de l\'application');
         setLoading(false);
       }
-    });
+    };
+
+    getInitialSession();
 
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+
+        console.log('Auth state changed:', event, session?.user?.id);
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -54,12 +84,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      setLoading(true);
+      console.log('Fetching profile for user:', userId);
+      
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -68,22 +102,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Erreur lors de la récupération du profil:', error);
-        setError('Erreur lors de la récupération du profil utilisateur');
+        
+        // Si l'utilisateur n'existe pas dans la table users, on peut le créer
+        if (error.code === 'PGRST116') {
+          console.log('Profil utilisateur non trouvé, création en cours...');
+          // Pour l'instant, on définit un profil par défaut
+          setProfile({
+            id: userId,
+            full_name: null,
+            email: null,
+            role: null,
+            phone_number: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        } else {
+          setError('Erreur lors de la récupération du profil utilisateur');
+        }
       } else {
+        console.log('Profile fetched successfully:', data);
         setProfile(data);
       }
     } catch (err) {
-      console.error('Erreur inattendue:', err);
+      console.error('Erreur inattendue lors de la récupération du profil:', err);
       setError('Une erreur inattendue s\'est produite');
     } finally {
       setLoading(false);
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, rememberMe = false) => {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('Attempting sign in for:', email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
@@ -91,6 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        console.error('Sign in error:', error);
+        
         let errorMessage = 'Erreur de connexion';
         
         if (error.message.includes('Invalid login credentials')) {
@@ -99,16 +154,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           errorMessage = 'Veuillez confirmer votre email avant de vous connecter';
         } else if (error.message.includes('Too many requests')) {
           errorMessage = 'Trop de tentatives. Veuillez réessayer plus tard';
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'Aucun compte trouvé avec cet email';
         }
         
         setError(errorMessage);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur de connexion',
+          text2: errorMessage,
+        });
+        
         return { error: errorMessage };
       }
 
-      return { error: null };
+      console.log('Sign in successful');
+      Toast.show({
+        type: 'success',
+        text1: 'Connexion réussie',
+        text2: 'Bienvenue !',
+      });
+
+      return { error: undefined };
     } catch (err) {
+      console.error('Unexpected sign in error:', err);
       const errorMessage = 'Une erreur inattendue s\'est produite';
       setError(errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: errorMessage,
+      });
       return { error: errorMessage };
     } finally {
       setLoading(false);
@@ -125,6 +201,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
 
+      console.log('Attempting sign up for:', email, 'with role:', role);
+
       // Étape 1: Créer le compte d'authentification
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -138,6 +216,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (authError) {
+        console.error('Auth sign up error:', authError);
+        
         let errorMessage = 'Erreur lors de la création du compte';
         
         if (authError.message.includes('User already registered')) {
@@ -146,14 +226,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           errorMessage = 'Le mot de passe doit contenir au moins 6 caractères';
         } else if (authError.message.includes('Invalid email')) {
           errorMessage = 'Format d\'email invalide';
+        } else if (authError.message.includes('Signup is disabled')) {
+          errorMessage = 'Les inscriptions sont temporairement désactivées';
         }
         
         setError(errorMessage);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur d\'inscription',
+          text2: errorMessage,
+        });
+        
         return { error: errorMessage };
       }
 
       // Étape 2: Créer le profil utilisateur dans la table users
       if (authData.user) {
+        console.log('Creating user profile for:', authData.user.id);
+        
         const { error: profileError } = await supabase
           .from('users')
           .insert({
@@ -166,16 +256,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
 
         if (profileError) {
-          console.error('Erreur lors de la création du profil:', profileError);
+          console.error('Profile creation error:', profileError);
           // Ne pas bloquer l'inscription si le profil n'a pas pu être créé
           // L'utilisateur pourra compléter son profil plus tard
+          Toast.show({
+            type: 'info',
+            text1: 'Compte créé',
+            text2: 'Veuillez compléter votre profil après connexion',
+          });
+        } else {
+          console.log('Profile created successfully');
+          Toast.show({
+            type: 'success',
+            text1: 'Compte créé avec succès',
+            text2: 'Vous pouvez maintenant vous connecter',
+          });
         }
       }
 
-      return { error: null };
+      return { error: undefined };
     } catch (err) {
+      console.error('Unexpected sign up error:', err);
       const errorMessage = 'Une erreur inattendue s\'est produite';
       setError(errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: errorMessage,
+      });
       return { error: errorMessage };
     } finally {
       setLoading(false);
@@ -187,15 +295,115 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
       
+      console.log('Attempting sign out');
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
+        console.error('Sign out error:', error);
         setError('Erreur lors de la déconnexion');
-        console.error('Erreur de déconnexion:', error);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: 'Erreur lors de la déconnexion',
+        });
+      } else {
+        console.log('Sign out successful');
+        Toast.show({
+          type: 'success',
+          text1: 'Déconnexion réussie',
+          text2: 'À bientôt !',
+        });
       }
     } catch (err) {
+      console.error('Unexpected sign out error:', err);
       setError('Une erreur inattendue s\'est produite');
-      console.error('Erreur inattendue lors de la déconnexion:', err);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: 'Une erreur inattendue s\'est produite',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetPasswordForEmail = async (email: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Attempting password reset for:', email);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://your-app.com/reset-password', // À remplacer par votre URL
+      });
+
+      if (error) {
+        console.error('Password reset error:', error);
+        
+        let errorMessage = 'Erreur lors de l\'envoi de l\'email de récupération';
+        
+        if (error.message.includes('User not found')) {
+          errorMessage = 'Aucun compte trouvé avec cet email';
+        } else if (error.message.includes('Email rate limit exceeded')) {
+          errorMessage = 'Trop de demandes. Veuillez réessayer plus tard';
+        }
+        
+        setError(errorMessage);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: errorMessage,
+        });
+        
+        return { error: errorMessage };
+      }
+
+      console.log('Password reset email sent successfully');
+      Toast.show({
+        type: 'success',
+        text1: 'Email envoyé',
+        text2: 'Vérifiez votre boîte mail pour réinitialiser votre mot de passe',
+      });
+
+      return { error: undefined };
+    } catch (err) {
+      console.error('Unexpected password reset error:', err);
+      const errorMessage = 'Une erreur inattendue s\'est produite';
+      setError(errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: errorMessage,
+      });
+      return { error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signInWithOAuth = async (provider: 'google' | 'apple' | 'facebook') => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Attempting OAuth sign in with:', provider);
+      
+      // Pour l'instant, c'est un placeholder
+      // L'implémentation complète nécessiterait la configuration des providers OAuth dans Supabase
+      Toast.show({
+        type: 'info',
+        text1: 'Fonctionnalité à venir',
+        text2: `La connexion via ${provider} sera bientôt disponible`,
+      });
+      
+      return { error: 'Fonctionnalité non encore implémentée' };
+    } catch (err) {
+      console.error('Unexpected OAuth error:', err);
+      const errorMessage = 'Une erreur inattendue s\'est produite';
+      setError(errorMessage);
+      return { error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -210,6 +418,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: 'Utilisateur non connecté' };
       }
 
+      console.log('Updating profile for user:', user.id, 'with updates:', updates);
+
       const { data, error } = await supabase
         .from('users')
         .update({
@@ -221,15 +431,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
+        console.error('Profile update error:', error);
         setError('Erreur lors de la mise à jour du profil');
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: 'Erreur lors de la mise à jour du profil',
+        });
         return { error: 'Erreur lors de la mise à jour du profil' };
       }
 
+      console.log('Profile updated successfully:', data);
       setProfile(data);
-      return { error: null };
+      Toast.show({
+        type: 'success',
+        text1: 'Profil mis à jour',
+        text2: 'Vos informations ont été sauvegardées',
+      });
+
+      return { error: undefined };
     } catch (err) {
+      console.error('Unexpected profile update error:', err);
       const errorMessage = 'Une erreur inattendue s\'est produite';
       setError(errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: errorMessage,
+      });
       return { error: errorMessage };
     } finally {
       setLoading(false);
@@ -251,6 +480,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       signOut,
+      resetPasswordForEmail,
+      signInWithOAuth,
       updateProfile,
       clearError,
     }}>
