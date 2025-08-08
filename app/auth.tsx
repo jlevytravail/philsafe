@@ -285,7 +285,6 @@ export default function AuthScreen() {
                 <Text style={[styles.errorMessage, { color: colors.error }]}>{error}</Text>
               </View>
             )}
-
             <View style={styles.form}>
               {authMode === 'login' ? (
                 <>
