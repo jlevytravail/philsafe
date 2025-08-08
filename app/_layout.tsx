@@ -11,7 +11,6 @@ import { router } from 'expo-router';
 
 function AuthNavigator() {
   const { session, profile, loading } = useAuth();
-  const [initializing, setInitializing] = useState(true);
   const rootNavigationState = useRootNavigationState();
   const isNavigationReady = rootNavigationState?.key != null;
 
@@ -23,25 +22,18 @@ function AuthNavigator() {
       isNavigationReady
     });
 
-    // Attendre que l'authentification et la navigation soient initialisées
+    // Navigation conditionnelle basée sur l'état d'authentification
     if (!loading && isNavigationReady) {
-      setInitializing(false);
-      
-      // Navigation conditionnelle basée sur l'état d'authentification
       if (!session) {
-        // Pas de session, rediriger vers auth
         console.log('No session, redirecting to auth');
         router.replace('/auth');
       } else if (profile?.role === 'aidant') {
-        // Utilisateur aidant, rediriger vers l'interface aidant
         console.log('Aidant role, redirecting to tabs');
         router.replace('/(tabs)');
       } else if (profile?.role === 'intervenant') {
-        // Utilisateur intervenant, rediriger vers l'interface intervenant
         console.log('Intervenant role, redirecting to caregiver');
         router.replace('/(caregiver)');
       } else if (profile && !profile.role) {
-        // Profil existe mais pas de rôle défini, rediriger vers auth pour reconfiguration
         console.log('Profile exists but no role, redirecting to auth');
         router.replace('/auth');
       }
@@ -49,7 +41,7 @@ function AuthNavigator() {
   }, [session, profile, loading, isNavigationReady]);
 
   // Afficher un écran de chargement pendant l'initialisation
-  if (initializing || loading || !isNavigationReady) {
+  if (loading || !isNavigationReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3B82F6" />
