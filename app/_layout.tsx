@@ -1,47 +1,51 @@
 import { useEffect, useState } from 'react';
-import { Stack, useRootNavigationState } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { VisitProvider } from '@/context/VisitContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { router } from 'expo-router';
 
 function AuthNavigator() {
   const { session, profile, loading } = useAuth();
-  const rootNavigationState = useRootNavigationState();
-  const isNavigationReady = rootNavigationState?.key != null;
+  const router = useRouter();
+  const segments = useSegments();
 
   useEffect(() => {
+    if (loading) return;
+    
     console.log('AuthNavigator - State:', { 
       hasSession: !!session, 
       profileRole: profile?.role, 
       loading,
-      isNavigationReady
+      segments
     });
 
     // Navigation conditionnelle basée sur l'état d'authentification
-    if (!loading && isNavigationReady) {
-      if (!session) {
-        console.log('No session, redirecting to auth');
-        router.replace('/auth');
-      } else if (profile?.role === 'aidant') {
-        console.log('Aidant role, redirecting to tabs');
-        router.replace('/(tabs)');
-      } else if (profile?.role === 'intervenant') {
-        console.log('Intervenant role, redirecting to caregiver');
-        router.replace('/(caregiver)');
-      } else if (profile && !profile.role) {
-        console.log('Profile exists but no role, redirecting to auth');
-        router.replace('/auth');
-      }
+    const inAuthGroup = segments[0] === 'auth' || segments[0] === 'login' || segments[0] === 'signup';
+    const inTabsGroup = segments[0] === '(tabs)';
+    const inCaregiverGroup = segments[0] === '(caregiver)';
+
+    if (!session && !inAuthGroup) {
+      console.log('No session, redirecting to auth');
+      router.replace('/auth');
+    } else if (session && profile?.role === 'aidant' && !inTabsGroup) {
+      console.log('Aidant role, redirecting to tabs');
+      router.replace('/(tabs)');
+    } else if (session && profile?.role === 'intervenant' && !inCaregiverGroup) {
+      console.log('Intervenant role, redirecting to caregiver');
+      router.replace('/(caregiver)');
+    } else if (session && profile && !profile.role && !inAuthGroup) {
+      console.log('Profile exists but no role, redirecting to auth');
+      router.replace('/auth');
     }
-  }, [session, profile, loading, isNavigationReady]);
+  }, [session, profile, loading, segments]);
 
   // Afficher un écran de chargement pendant l'initialisation
-  if (loading || !isNavigationReady) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#3B82F6" />
@@ -66,17 +70,19 @@ export default function RootLayout() {
   useFrameworkReady();
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <VisitProvider>
-          <>
-            <AuthNavigator />
-            <StatusBar style="auto" />
-            <Toast />
-          </>
-        </VisitProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <VisitProvider>
+            <>
+              <AuthNavigator />
+              <StatusBar style="auto" />
+              <Toast />
+            </>
+          </VisitProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
