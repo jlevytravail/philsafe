@@ -1,6 +1,6 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase, Database } from '@/utils/supabase';
+import { supabase, Database } from '../src/lib/supabase';
 import Toast from 'react-native-toast-message';
 
 type UserProfile = Database['public']['Tables']['users']['Row'];
@@ -17,6 +17,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPasswordForEmail: (email: string) => Promise<{ error?: string }>;
   signInWithOAuth: (provider: 'google' | 'apple' | 'facebook') => Promise<{ error?: string }>;
+  signInWithOtp: (email: string) => Promise<{ error?: string }>;
+  verifyOtp: (email: string, token: string) => Promise<{ error?: string }>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error?: string }>;
   clearError: () => void;
 }
@@ -72,6 +74,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         console.log('Auth state changed:', event, session?.user?.id);
         
+        // Gestion spéciale pour les magic links
+        if (event === 'SIGNED_IN' && session) {
+          console.log('User signed in via magic link or other method');
+          Toast.show({
+            type: 'success',
+            text1: 'Connexion réussie',
+            text2: 'Bienvenue dans PhilSafe !',
+          });
+        }
+        
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out');
+          setProfile(null);
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -103,19 +120,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('Erreur lors de la récupération du profil:', error);
         
-        // Si l'utilisateur n'existe pas dans la table users, on peut le créer
+        // Si l'utilisateur n'existe pas dans la table users
         if (error.code === 'PGRST116') {
-          console.log('Profil utilisateur non trouvé, création en cours...');
-          // Pour l'instant, on définit un profil par défaut
-          setProfile({
-            id: userId,
-            full_name: null,
-            email: null,
-            role: null,
-            phone_number: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
+          console.log('Profil utilisateur non trouvé - il sera créé automatiquement lors de la prochaine inscription');
+          // Ne pas créer de profil ici, laisser le processus de signup le faire
+          setProfile(null);
         } else {
           setError('Erreur lors de la récupération du profil utilisateur');
         }
@@ -244,6 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (authData.user) {
         console.log('Creating user profile for:', authData.user.id);
         
+        // Créer le profil directement maintenant que les policies RLS sont en place
         const { error: profileError } = await supabase
           .from('users')
           .insert({
@@ -251,12 +261,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             full_name: fullName.trim(),
             email: email.trim().toLowerCase(),
             role,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           });
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
+          console.log('Profile creation failed for user:', authData.user.id, 'with data:', {
+            id: authData.user.id,
+            full_name: fullName.trim(),
+            email: email.trim().toLowerCase(),
+            role,
+          });
           // Ne pas bloquer l'inscription si le profil n'a pas pu être créé
           // L'utilisateur pourra compléter son profil plus tard
           Toast.show({
@@ -265,7 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             text2: 'Veuillez compléter votre profil après connexion',
           });
         } else {
-          console.log('Profile created successfully');
+          console.log('Profile created successfully for user:', authData.user.id);
           Toast.show({
             type: 'success',
             text1: 'Compte créé avec succès',
@@ -336,7 +350,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('Attempting password reset for:', email);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://your-app.com/reset-password', // À remplacer par votre URL
+        redirectTo: 'philsafe://auth-callback', // Deep link vers l'app
       });
 
       if (error) {
@@ -422,10 +436,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data, error } = await supabase
         .from('users')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updates)
         .eq('id', user.id)
         .select()
         .single();
@@ -465,6 +476,132 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signInWithOtp = async (email: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Attempting OTP sign in for:', email);
+      console.log('Supabase client config:', {
+        url: supabase.supabaseUrl,
+        key: supabase.supabaseKey?.substring(0, 20) + '...'
+      });
+      
+      const { data, error } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: {
+          shouldCreateUser: false, // Seulement pour les utilisateurs existants
+          // PAS de emailRedirectTo = Supabase envoie un code à 6 chiffres
+        }
+      });
+
+      console.log('OTP response data:', data);
+      console.log('OTP response error:', error);
+
+      if (error) {
+        console.error('OTP sign in error:', error);
+        
+        let errorMessage = 'Erreur lors de l\'envoi du lien de connexion';
+        
+        if (error.message.includes('Email rate limit exceeded')) {
+          errorMessage = 'Trop de demandes. Veuillez réessayer plus tard';
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = 'Format d\'email invalide';
+        }
+        
+        setError(errorMessage);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur',
+          text2: errorMessage,
+        });
+        
+        return { error: errorMessage };
+      }
+
+      console.log('OTP email sent successfully');
+      Toast.show({
+        type: 'success',
+        text1: 'Code envoyé',
+        text2: 'Vérifiez votre boîte mail et saisissez le code à 6 chiffres',
+      });
+
+      return { error: undefined };
+    } catch (err) {
+      console.error('Unexpected OTP error:', err);
+      const errorMessage = 'Une erreur inattendue s\'est produite';
+      setError(errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: errorMessage,
+      });
+      return { error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async (email: string, token: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('Attempting OTP verification for:', email, 'with token:', token);
+      
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.trim().toLowerCase(),
+        token: token.trim(),
+        type: 'email'
+      });
+
+      console.log('OTP verification response data:', data);
+      console.log('OTP verification response error:', error);
+
+      if (error) {
+        console.error('OTP verification error:', error);
+        
+        let errorMessage = 'Code invalide ou expiré';
+        
+        if (error.message.includes('Token has expired')) {
+          errorMessage = 'Le code a expiré. Demandez un nouveau code.';
+        } else if (error.message.includes('Invalid token')) {
+          errorMessage = 'Code invalide. Vérifiez et réessayez.';
+        }
+        
+        setError(errorMessage);
+        Toast.show({
+          type: 'error',
+          text1: 'Erreur de vérification',
+          text2: errorMessage,
+        });
+        
+        return { error: errorMessage };
+      }
+
+      console.log('OTP verification successful');
+      Toast.show({
+        type: 'success',
+        text1: 'Connexion réussie',
+        text2: 'Bienvenue dans PhilSafe !',
+      });
+
+      return { error: undefined };
+    } catch (err) {
+      console.error('Unexpected OTP verification error:', err);
+      const errorMessage = 'Une erreur inattendue s\'est produite';
+      setError(errorMessage);
+      Toast.show({
+        type: 'error',
+        text1: 'Erreur',
+        text2: errorMessage,
+      });
+      return { error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearError = () => {
     setError(null);
   };
@@ -482,6 +619,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       resetPasswordForEmail,
       signInWithOAuth,
+      signInWithOtp,
+      verifyOtp,
       updateProfile,
       clearError,
     }}>

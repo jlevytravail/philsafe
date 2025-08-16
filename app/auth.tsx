@@ -10,6 +10,7 @@ import {
   Switch,
   Alert
 } from 'react-native';
+import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Mail, Lock, User, Heart, ArrowLeft } from 'lucide-react-native';
@@ -24,9 +25,20 @@ import RoleSelector from '@/components/RoleSelector';
 
 export default function AuthScreen() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [rememberMe, setRememberMe] = useState(false);
-  const { signIn, signUp, resetPasswordForEmail, signInWithOAuth, loading, error, clearError, session, role } = useAuth();
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+
+  const { signIn, signUp, resetPasswordForEmail, signInWithOAuth, signInWithOtp, verifyOtp, loading, error, clearError, session, role } = useAuth();
   const { colors } = useThemeContext();
+
+  // Debug state changes
+  useEffect(() => {
+    console.log('OTP state changed:', { otpSent, otpEmail, authMode });
+  }, [otpSent, otpEmail, authMode]);
+
+  // Debug render
+  console.log('=== RENDER ===', { otpSent, authMode, loading });
 
   // Redirection automatique si déjà connecté
   useEffect(() => {
@@ -39,15 +51,40 @@ export default function AuthScreen() {
     }
   }, [session, role]);
 
+  // Handler pour les deep links (magic links de Supabase)
+  useEffect(() => {
+    const handleDeepLink = (url: string) => {
+      console.log('Deep link received:', url);
+      
+      // Les magic links de Supabase contiennent des fragments (#access_token=...)
+      // Supabase gère automatiquement l'extraction du token avec detectSessionInUrl: true
+      if (url.includes('#access_token=') || url.includes('?access_token=')) {
+        console.log('Auth token detected in URL, Supabase will handle session creation');
+      }
+    };
+
+    // Vérifier l'URL initiale au lancement de l'app
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink(url);
+      }
+    });
+
+    // Écouter les nouveaux deep links
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
+
   // Configuration des règles de validation
   const loginValidationRules = {
     email: {
       required: true,
       pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-    },
-    password: {
-      required: true,
-      minLength: 1,
     },
   };
 
@@ -79,7 +116,7 @@ export default function AuthScreen() {
 
   // Hooks de formulaire
   const loginForm = useForm(
-    { email: '', password: '' },
+    { email: '' },
     loginValidationRules
   );
 
@@ -100,34 +137,75 @@ export default function AuthScreen() {
   }, [authMode]);
 
   const handleLogin = async () => {
+    console.log('=== handleLogin called ===');
+    console.log('Form data:', loginForm.formData);
+    console.log('Form valid:', !loginForm.hasErrors);
+    
     if (!loginForm.validateForm()) {
+      console.log('Form validation failed');
       return;
     }
 
-    const { error } = await signIn(
-      loginForm.formData.email, 
-      loginForm.formData.password, 
-      rememberMe
-    );
-    
-    if (!error) {
-      loginForm.resetForm();
+    console.log('Calling signInWithOtp...');
+    try {
+      const { error } = await signInWithOtp(loginForm.formData.email);
+      console.log('signInWithOtp result:', { error });
+      
+      if (!error) {
+        console.log('Setting OTP sent to true for email:', loginForm.formData.email);
+        setOtpSent(true);
+        setOtpEmail(loginForm.formData.email);
+        console.log('OTP state updated');
+      } else {
+        console.log('Error occurred, not setting OTP sent:', error);
+      }
+    } catch (err) {
+      console.error('Unexpected error in handleLogin:', err);
     }
   };
 
-  const handleSignUp = async () => {
-    if (!signupForm.validateForm()) {
+  const handleVerifyOtp = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      Alert.alert('Erreur', 'Veuillez saisir le code à 6 chiffres');
       return;
     }
 
-    const { error } = await signUp(
-      signupForm.formData.email,
-      signupForm.formData.password,
-      signupForm.formData.fullName,
-      selectedRole
-    );
+    try {
+      const { error } = await verifyOtp(otpEmail, otpCode);
+      
+      if (!error) {
+        setOtpSent(false);
+        setOtpCode('');
+        setOtpEmail('');
+        loginForm.resetForm();
+      }
+    } catch (err) {
+      console.error('Unexpected error in handleVerifyOtp:', err);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setOtpSent(false);
+    setOtpCode('');
+    setOtpEmail('');
+  };
+
+  const handleSignUp = async () => {
+    if (!signupForm.formData.email || !signupForm.formData.fullName) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs requis');
+      return;
+    }
+
+    // Pour l'instant, utiliser OTP avec les données de signup stockées temporairement
+    // TODO: Améliorer pour passer les données lors du callback du magic link
+    const { error } = await signInWithOtp(signupForm.formData.email);
     
     if (!error) {
+      Alert.alert(
+        'Email envoyé',
+        `Un lien de connexion a été envoyé à ${signupForm.formData.email}. Après avoir cliqué sur le lien, vous pourrez compléter votre profil.`,
+        [{ text: 'OK' }]
+      );
       signupForm.resetForm();
       setAuthMode('login');
     }
@@ -158,6 +236,29 @@ export default function AuthScreen() {
 
   const handleSocialLogin = (provider: 'google' | 'apple' | 'facebook') => {
     signInWithOAuth(provider);
+  };
+
+  const handleMagicLinkLogin = () => {
+    if (!loginForm.formData.email) {
+      Alert.alert(
+        'Email requis',
+        'Veuillez saisir votre email pour recevoir un lien de connexion',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Connexion par lien magique',
+      `Envoyer un lien de connexion à ${loginForm.formData.email} ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Envoyer', 
+          onPress: () => signInWithOtp(loginForm.formData.email)
+        }
+      ]
+    );
   };
 
   const styles = StyleSheet.create({
@@ -286,14 +387,79 @@ export default function AuthScreen() {
               </View>
             )}
             <View style={styles.form}>
-              {authMode === 'login' ? (
+              {otpSent ? (
+                <>
+                  <TouchableOpacity 
+                    onPress={handleBackToLogin}
+                    style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}
+                  >
+                    <ArrowLeft size={20} color={colors.primary} />
+                    <Text style={{ color: colors.primary, marginLeft: 8, fontSize: 16 }}>Retour</Text>
+                  </TouchableOpacity>
+
+                  <Text style={[{ 
+                    color: colors.text, 
+                    fontSize: 24, 
+                    fontWeight: '600',
+                    textAlign: 'center', 
+                    marginBottom: 8
+                  }]}>
+                    Vérification
+                  </Text>
+
+                  <Text style={[{ 
+                    color: colors.textSecondary, 
+                    fontSize: 16, 
+                    textAlign: 'center', 
+                    marginBottom: 32,
+                    lineHeight: 22 
+                  }]}>
+                    Nous avons envoyé un code à 6 chiffres à{'\n'}{otpEmail}
+                  </Text>
+
+                  <AuthInput
+                    label="Code de vérification"
+                    value={otpCode}
+                    onChangeText={setOtpCode}
+                    placeholder="123456"
+                    keyboardType="numeric"
+                    maxLength={6}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+
+                  <AuthButton
+                    title={loading ? "Vérification..." : "Vérifier le code"}
+                    onPress={handleVerifyOtp}
+                    loading={loading}
+                    disabled={otpCode.length !== 6 || loading}
+                    icon={<Mail size={20} color="#FFFFFF" />}
+                  />
+
+                  <TouchableOpacity 
+                    onPress={handleLogin}
+                    style={{ alignSelf: 'center', marginTop: 24 }}
+                    disabled={loading}
+                  >
+                    <Text style={[{ color: colors.primary, fontSize: 16 }]}>
+                      Renvoyer le code
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : authMode === 'login' ? (
                 <>
                   <AuthInput
                     label="Email"
                     icon={<Mail size={20} color={colors.textTertiary} />}
                     value={loginForm.formData.email}
-                    onChangeText={(text) => loginForm.handleChange('email', text)}
-                    onBlur={() => loginForm.handleBlur('email')}
+                    onChangeText={(text) => {
+                      console.log('Email input changed:', text);
+                      loginForm.handleChange('email', text);
+                    }}
+                    onBlur={() => {
+                      console.log('Email input blurred, current value:', loginForm.formData.email);
+                      loginForm.handleBlur('email');
+                    }}
                     error={loginForm.getFieldError('email')}
                     placeholder="votre@email.com"
                     keyboardType="email-address"
@@ -302,53 +468,80 @@ export default function AuthScreen() {
                     required
                   />
 
-                  <AuthInput
-                    label="Mot de passe"
-                    icon={<Lock size={20} color={colors.textTertiary} />}
-                    value={loginForm.formData.password}
-                    onChangeText={(text) => loginForm.handleChange('password', text)}
-                    onBlur={() => loginForm.handleBlur('password')}
-                    error={loginForm.getFieldError('password')}
-                    placeholder="Votre mot de passe"
-                    isPassword
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    required
-                  />
-
-                  <View style={styles.rememberMeContainer}>
-                    <View style={styles.rememberMeLeft}>
-                      <Switch
-                        value={rememberMe}
-                        onValueChange={setRememberMe}
-                        trackColor={{ false: colors.border, true: colors.primary }}
-                        thumbColor={rememberMe ? '#FFFFFF' : colors.textTertiary}
-                        accessibilityLabel="Se souvenir de moi"
-                      />
-                      <Text style={[styles.rememberMeText, { color: colors.textSecondary }]}>
-                        Se souvenir de moi
-                      </Text>
-                    </View>
-                    
-                    <TouchableOpacity 
-                      onPress={handleForgotPassword}
-                      style={styles.forgotPasswordButton}
-                      accessibilityRole="button"
-                      accessibilityLabel="Mot de passe oublié"
-                    >
-                      <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
-                        Mot de passe oublié ?
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Text style={[{ 
+                    color: colors.textSecondary, 
+                    fontSize: 14, 
+                    textAlign: 'center', 
+                    marginBottom: 16,
+                    lineHeight: 20 
+                  }]}>
+                    Saisissez votre email ci-dessus et cliquez sur "Envoyer le lien de connexion" pour recevoir un lien magique par email.
+                  </Text>
 
                   <AuthButton
-                    title="Se connecter"
+                    title={loading ? "Envoi en cours..." : "Envoyer le lien de connexion"}
                     onPress={handleLogin}
                     loading={loading}
-                    disabled={loginForm.hasErrors}
+                    disabled={loginForm.hasErrors || loading}
                     icon={<Mail size={20} color="#FFFFFF" />}
                   />
+
+                  {loading && (
+                    <Text style={[{ 
+                      color: colors.primary, 
+                      fontSize: 14, 
+                      textAlign: 'center', 
+                      marginTop: 12,
+                      fontWeight: '500'
+                    }]}>
+                      📧 Vérifiez votre boîte email et cliquez sur le lien de connexion
+                    </Text>
+                  )}
+
+                  <View style={styles.divider}>
+                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                    <Text style={[styles.dividerText, { color: colors.textTertiary }]}>ou</Text>
+                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                  </View>
+
+                  <TouchableOpacity 
+                    onPress={handleForgotPassword}
+                    style={[styles.forgotPasswordButton, { alignSelf: 'center' }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Mot de passe oublié"
+                  >
+                    <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
+                      Réinitialiser le mot de passe
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Bouton debug temporaire */}
+                  <TouchableOpacity 
+                    onPress={() => {
+                      console.log('DEBUG: Force setting OTP sent to true');
+                      setOtpSent(true);
+                      setOtpEmail(loginForm.formData.email || 'test@test.com');
+                    }}
+                    style={[styles.forgotPasswordButton, { alignSelf: 'center', marginTop: 16 }]}
+                  >
+                    <Text style={[styles.forgotPasswordText, { color: colors.error }]}>
+                      [DEBUG] Forcer écran code
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    onPress={() => {
+                      console.log('DEBUG: Manual handleLogin test');
+                      console.log('Current email:', loginForm.formData.email);
+                      console.log('Form valid:', loginForm.validateForm());
+                      handleLogin();
+                    }}
+                    style={[styles.forgotPasswordButton, { alignSelf: 'center', marginTop: 8 }]}
+                  >
+                    <Text style={[styles.forgotPasswordText, { color: colors.error }]}>
+                      [DEBUG] Test handleLogin
+                    </Text>
+                  </TouchableOpacity>
                 </>
               ) : (
                 <>
@@ -378,33 +571,15 @@ export default function AuthScreen() {
                     required
                   />
 
-                  <AuthInput
-                    label="Mot de passe"
-                    icon={<Lock size={20} color={colors.textTertiary} />}
-                    value={signupForm.formData.password}
-                    onChangeText={(text) => signupForm.handleChange('password', text)}
-                    onBlur={() => signupForm.handleBlur('password')}
-                    error={signupForm.getFieldError('password')}
-                    placeholder="Minimum 8 caractères"
-                    isPassword
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    required
-                  />
-
-                  <AuthInput
-                    label="Confirmer le mot de passe"
-                    icon={<Lock size={20} color={colors.textTertiary} />}
-                    value={signupForm.formData.confirmPassword}
-                    onChangeText={(text) => signupForm.handleChange('confirmPassword', text)}
-                    onBlur={() => signupForm.handleBlur('confirmPassword')}
-                    error={signupForm.getFieldError('confirmPassword')}
-                    placeholder="Confirmez votre mot de passe"
-                    isPassword
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    required
-                  />
+                  <Text style={[{ 
+                    color: colors.textSecondary, 
+                    fontSize: 14, 
+                    textAlign: 'center', 
+                    marginBottom: 16,
+                    lineHeight: 20 
+                  }]}>
+                    Saisissez vos informations ci-dessus. Un lien de connexion vous sera envoyé par email.
+                  </Text>
 
                   <RoleSelector
                     selectedRole={selectedRole}
@@ -413,11 +588,11 @@ export default function AuthScreen() {
                   />
 
                   <AuthButton
-                    title="Créer mon compte"
+                    title={loading ? "Envoi en cours..." : "Créer mon compte"}
                     onPress={handleSignUp}
                     loading={loading}
-                    disabled={signupForm.hasErrors}
-                    icon={<User size={20} color="#FFFFFF" />}
+                    disabled={loading}
+                    icon={<Mail size={20} color="#FFFFFF" />}
                   />
                 </>
               )}

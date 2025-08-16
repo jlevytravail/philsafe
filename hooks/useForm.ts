@@ -70,7 +70,12 @@ export function useForm(initialState: FormData, validationRules: ValidationRules
   }, [formData, validationRules]);
 
   const handleChange = useCallback((fieldName: string, value: string) => {
-    setFormData(prev => ({ ...prev, [fieldName]: value }));
+    console.log('[useForm] handleChange called:', { fieldName, value });
+    setFormData(prev => {
+      const newData = { ...prev, [fieldName]: value };
+      console.log('[useForm] Updated formData:', newData);
+      return newData;
+    });
     
     // Clear error when user starts typing
     if (errors[fieldName]) {
@@ -86,12 +91,16 @@ export function useForm(initialState: FormData, validationRules: ValidationRules
   }, [formData, validateField]);
 
   const validateForm = useCallback((): boolean => {
+    console.log('[useForm] validateForm called with formData:', formData);
     const newErrors: FormErrors = {};
     let isValid = true;
 
     Object.keys(validationRules).forEach(fieldName => {
-      const error = validateField(fieldName, formData[fieldName] || '');
+      const fieldValue = formData[fieldName] || '';
+      console.log('[useForm] Validating field:', fieldName, 'value:', fieldValue);
+      const error = validateField(fieldName, fieldValue);
       if (error) {
+        console.log('[useForm] Validation error for', fieldName, ':', error);
         newErrors[fieldName] = error;
         isValid = false;
       }
@@ -100,6 +109,7 @@ export function useForm(initialState: FormData, validationRules: ValidationRules
     setErrors(newErrors);
     setTouched(Object.keys(validationRules).reduce((acc, key) => ({ ...acc, [key]: true }), {}));
     
+    console.log('[useForm] validateForm result:', { isValid, newErrors });
     return isValid;
   }, [formData, validationRules, validateField]);
 
