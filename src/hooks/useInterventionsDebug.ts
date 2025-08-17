@@ -48,7 +48,25 @@ export function useInterventionsDebug() {
 
       console.log('🔍 [DEBUG] User role:', profile.role, 'User ID:', session.user.id);
 
-      // VERSION SIMPLE : Récupérer TOUTES les interventions de l'utilisateur
+      // TESTER D'ABORD SANS RELATIONS pour isoler le problème RLS
+      console.log('🔍 [DEBUG] Testing simple query first...');
+      
+      const simpleQuery = supabase
+        .from('interventions')
+        .select('*')
+        .eq('intervenant_id', session.user.id);
+
+      const { data: simpleData, error: simpleError } = await simpleQuery;
+      
+      console.log('🔍 [DEBUG] Simple query result:', simpleData?.length, 'interventions');
+      console.log('🔍 [DEBUG] Simple query error:', simpleError);
+
+      if (simpleError) {
+        console.error('🚨 [DEBUG] RLS Policy Error:', simpleError);
+        throw simpleError;
+      }
+
+      // Si la requête simple marche, tester avec les relations
       const query = supabase
         .from('interventions')
         .select(`

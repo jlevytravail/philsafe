@@ -221,10 +221,91 @@ Connexion OTP → UserContext fetch profil →
 **✅ Navigation par rôles** : RoleGuard et redirection automatique
 **✅ Stacks spécialisées** : Interfaces dédiées aidants vs intervenants
 
+## 🚀 Intégration données réelles - Session du 17 août 2025
+
+### ✅ Objectif accompli : Remplacer les données mockées par de vraies données Supabase
+
+**Implémentation système de données temps réel :**
+- ✅ **Architecture complète** : Hooks spécialisés avec filtrage par rôle
+- ✅ **Base de données** : Schéma complet avec foreign keys et RLS policies
+- ✅ **Abonnements temps réel** : Mise à jour automatique via Supabase subscriptions
+- ✅ **Documentation complète** : Guides de test et scripts SQL
+
+### Hooks créés (src/hooks/)
+
+**useInterventions.ts** : Hook principal avec options avancées
+- Filtrage par rôle (aidant via patient_links / intervenant direct)
+- Fenêtres de dates configurables (today, week, custom)
+- Pagination et tri automatique
+- Abonnement temps réel postgres_changes
+
+**usePatients.ts** : Gestion des patients par rôle
+- Intervenants : patients avec interventions assignées
+- Aidants : patients liés via aidant_patient_links
+
+**useInterventionsDebug.ts** : Version debug avec logs détaillés
+
+### Composants mis à jour
+
+**Dashboard aidants** (`app/(tabs)/index.tsx`) :
+- ✅ Remplacement du VisitContext par useInterventions
+- ✅ Transformation des données pour compatibilité composants existants
+- ✅ États de loading/error intégrés
+
+**Dashboard intervenants** (`app/(caregiver)/index.tsx`) :
+- ✅ Écran "Tournée" avec vraies interventions d'aujourd'hui
+- ✅ Format compatible avec les composants appointment existants
+- ✅ Gestion des statuts (planned/done/missed)
+
+**Liste patients** (`app/(caregiver)/patients.tsx`) :
+- ✅ Données réelles avec calcul automatique des âges
+- ✅ Notes médicales dynamiques depuis la base
+- ✅ Recherche sur nom et adresse
+
+### Base de données
+
+**Types Supabase étendus** (`src/lib/supabase.ts`) :
+- patients, interventions, intervention_logs
+- aidant_patient_links, notifications
+- Foreign keys et relations correctement typées
+
+**Scripts SQL fournis :**
+- `COMPLETE_TEST_DATA.sql` : Données complètes pour test
+- `FINAL_TEST_WITH_YOUR_UUID.sql` : Script personnalisé
+- `FIX_RLS_POLICIES.sql` : Correction des policies de sécurité
+- `DEBUG_INTERVENTIONS.sql` : Diagnostic des problèmes
+
+### 🔧 Status actuel : Problème RLS identifié
+
+**Symptômes diagnostiqués :**
+- ✅ **SQL direct** : Fonctionne (3 interventions visibles)
+- ❌ **Hook app** : 0 interventions récupérées
+- 🔍 **Cause** : Row Level Security policies bloquent l'accès API
+
+**UUID utilisateur identifié :** `06192242-9578-4ca5-adf5-c305c42937b5`
+
+**Solution préparée :**
+- Scripts de correction RLS prêts (`FIX_RLS_POLICIES.sql`)
+- Hook debug avec tests progressifs
+- Logs détaillés pour diagnostic
+
+### 📁 Nouveaux fichiers créés
+
+**Documentation :**
+- `INTEGRATION_GUIDE.md` : Guide complet d'intégration
+- `QUICK_TEST_GUIDE.md` : Guide de test rapide
+- `DEBUG_HOOKS.md` : Outils de diagnostic
+
+**Scripts SQL :**
+- `SAMPLE_DATA.sql` : Données génériques
+- `COMPLETE_TEST_DATA.sql` : Dataset complet avec 5 patients, 12 interventions
+- `FINAL_TEST_WITH_YOUR_UUID.sql` : Script personnalisé pour UUID utilisateur
+- `FIX_RLS_POLICIES.sql` : Correction policies Supabase
+
 ### Prochaine session
 
-1. **Remplacer les données mock** : Connecter les vraies données Supabase *(PRIORITÉ)*
-2. **Amélioration UX :** Ajouter des indicateurs de chargement et animations
-3. **Tests :** Ajouter des tests automatisés pour le flow d'authentification complet
-4. **Sécurité :** Validation côté serveur et gestion des erreurs avancée
-5. **Optimisation :** Performance et gestion des états complexes
+1. **Résoudre problème RLS** : Exécuter `FIX_RLS_POLICIES.sql` *(PRIORITÉ)*
+2. **Finaliser tests** : Valider le fonctionnement complet temps réel
+3. **Nettoyage** : Retirer les hooks debug et logs temporaires
+4. **Optimisation** : Performance et gestion d'erreurs avancée
+5. **Tests cross-rôles** : Validation aidant ↔ intervenant
