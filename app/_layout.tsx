@@ -7,42 +7,93 @@ import Toast from 'react-native-toast-message';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { VisitProvider } from '@/context/VisitContext';
 import { ThemeProvider } from '@/context/ThemeContext';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthProvider } from '@/context/AuthContext';
+import { UserProvider, useSessionUser } from '@/context/UserContext';
 
 function AuthNavigator() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, isProfileComplete } = useSessionUser();
   const router = useRouter();
   const segments = useSegments();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Log pour debugging - affiche l'état à chaque changement (commenté pour réduire le bruit)
+  // console.log('🔍 AuthNavigator render:', {
+  //   hasSession: !!session,
+  //   userId: session?.user?.id,
+  //   profileExists: !!profile,
+  //   profileRole: profile?.role,
+  //   profileFullName: profile?.full_name,
+  //   isProfileComplete,
+  //   loading,
+  //   isMounted,
+  //   currentSegment: segments[0]
+  // });
+
+  // Attendre que le composant soit monté avant d'autoriser la navigation
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
-    if (loading) return;
+    // Attendre que le composant soit monté ET que le chargement soit terminé
+    if (!isMounted || loading) return;
     
     console.log('AuthNavigator - State:', { 
       hasSession: !!session, 
+      sessionUserId: session?.user?.id,
       profileRole: profile?.role, 
+      profileFullName: profile?.full_name,
+      isProfileComplete,
       loading,
+      isMounted,
       segments
     });
 
     // Navigation conditionnelle basée sur l'état d'authentification
     const inAuthGroup = segments[0] === 'auth' || segments[0] === 'login' || segments[0] === 'signup';
+    const inCompleteProfile = segments[0] === 'complete-profile';
     const inTabsGroup = segments[0] === '(tabs)';
     const inCaregiverGroup = segments[0] === '(caregiver)';
 
+    // Utiliser setTimeout pour s'assurer que la navigation se fait après le rendu
+    const navigate = (path: string) => {
+      setTimeout(() => {
+        console.log('Navigating to:', path);
+        router.replace(path);
+      }, 100); // Augmenter légèrement le délai pour être sûr
+    };
+
+    // Pas de session → page de connexion
     if (!session && !inAuthGroup) {
       console.log('No session, redirecting to auth');
-      router.replace('/auth');
-    } else if (session && profile?.role === 'aidant' && !inTabsGroup) {
-      console.log('Aidant role, redirecting to tabs');
-      router.replace('/(tabs)');
-    } else if (session && profile?.role === 'intervenant' && !inCaregiverGroup) {
-      console.log('Intervenant role, redirecting to caregiver');
-      router.replace('/(caregiver)');
-    } else if (session && profile && !profile.role && !inAuthGroup) {
-      console.log('Profile exists but no role, redirecting to auth');
-      router.replace('/auth');
+      navigate('/auth');
+      return;
     }
-  }, [session, profile, loading, segments]);
+
+    // Session mais pas de profil chargé → attendre le chargement du profil
+    if (session && !profile) {
+      console.log('⏳ Session exists but profile not loaded yet, waiting...');
+      return;
+    }
+
+    // Session + profil incomplet → page de complétion
+    if (session && profile && !isProfileComplete && !inCompleteProfile) {
+      console.log('✅ Session exists but profile incomplete, redirecting to complete-profile');
+      navigate('/complete-profile');
+      return;
+    }
+
+    // Session + profil complet → redirection selon le rôle
+    if (session && profile && isProfileComplete) {
+      if (profile.role === 'aidant' && !inTabsGroup) {
+        console.log('Aidant role, redirecting to tabs');
+        navigate('/(tabs)');
+      } else if (profile.role === 'intervenant' && !inCaregiverGroup) {
+        console.log('Intervenant role, redirecting to caregiver');
+        navigate('/(caregiver)');
+      }
+    }
+  }, [session, profile, loading, isProfileComplete, segments, isMounted]);
 
   // Afficher un écran de chargement pendant l'initialisation
   if (loading) {
@@ -58,6 +109,7 @@ function AuthNavigator() {
       <Stack.Screen name="auth" />
       <Stack.Screen name="login" />
       <Stack.Screen name="signup" />
+      <Stack.Screen name="complete-profile" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(caregiver)" />
       <Stack.Screen name="visit/[id]" />
@@ -73,13 +125,15 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <VisitProvider>
-            <>
-              <AuthNavigator />
-              <StatusBar style="auto" />
-              <Toast />
-            </>
-          </VisitProvider>
+          <UserProvider>
+            <VisitProvider>
+              <>
+                <AuthNavigator />
+                <StatusBar style="auto" />
+                <Toast />
+              </>
+            </VisitProvider>
+          </UserProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

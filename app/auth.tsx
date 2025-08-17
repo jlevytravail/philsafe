@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { Mail, Lock, User, Heart, ArrowLeft } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -25,31 +24,12 @@ import RoleSelector from '@/components/RoleSelector';
 
 export default function AuthScreen() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpEmail, setOtpEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
 
-  const { signIn, signUp, resetPasswordForEmail, signInWithOAuth, signInWithOtp, verifyOtp, loading, error, clearError, session, role } = useAuth();
+  const { signIn, signUp, resetPasswordForEmail, signInWithOAuth, signInWithOtp, verifyOtp, loading, error, clearError, otpSent, otpEmail, clearOtpState } = useAuth();
   const { colors } = useThemeContext();
 
-  // Debug state changes
-  useEffect(() => {
-    console.log('OTP state changed:', { otpSent, otpEmail, authMode });
-  }, [otpSent, otpEmail, authMode]);
 
-  // Debug render
-  console.log('=== RENDER ===', { otpSent, authMode, loading });
-
-  // Redirection automatique si déjà connecté
-  useEffect(() => {
-    if (session && role) {
-      if (role === 'aidant') {
-        router.replace('/(tabs)');
-      } else if (role === 'intervenant') {
-        router.replace('/(caregiver)');
-      }
-    }
-  }, [session, role]);
 
   // Handler pour les deep links (magic links de Supabase)
   useEffect(() => {
@@ -137,28 +117,12 @@ export default function AuthScreen() {
   }, [authMode]);
 
   const handleLogin = async () => {
-    console.log('=== handleLogin called ===');
-    console.log('Form data:', loginForm.formData);
-    console.log('Form valid:', !loginForm.hasErrors);
-    
     if (!loginForm.validateForm()) {
-      console.log('Form validation failed');
       return;
     }
 
-    console.log('Calling signInWithOtp...');
     try {
-      const { error } = await signInWithOtp(loginForm.formData.email);
-      console.log('signInWithOtp result:', { error });
-      
-      if (!error) {
-        console.log('Setting OTP sent to true for email:', loginForm.formData.email);
-        setOtpSent(true);
-        setOtpEmail(loginForm.formData.email);
-        console.log('OTP state updated');
-      } else {
-        console.log('Error occurred, not setting OTP sent:', error);
-      }
+      await signInWithOtp(loginForm.formData.email);
     } catch (err) {
       console.error('Unexpected error in handleLogin:', err);
     }
@@ -174,9 +138,7 @@ export default function AuthScreen() {
       const { error } = await verifyOtp(otpEmail, otpCode);
       
       if (!error) {
-        setOtpSent(false);
         setOtpCode('');
-        setOtpEmail('');
         loginForm.resetForm();
       }
     } catch (err) {
@@ -185,9 +147,8 @@ export default function AuthScreen() {
   };
 
   const handleBackToLogin = () => {
-    setOtpSent(false);
+    clearOtpState();
     setOtpCode('');
-    setOtpEmail('');
   };
 
   const handleSignUp = async () => {
@@ -452,14 +413,8 @@ export default function AuthScreen() {
                     label="Email"
                     icon={<Mail size={20} color={colors.textTertiary} />}
                     value={loginForm.formData.email}
-                    onChangeText={(text) => {
-                      console.log('Email input changed:', text);
-                      loginForm.handleChange('email', text);
-                    }}
-                    onBlur={() => {
-                      console.log('Email input blurred, current value:', loginForm.formData.email);
-                      loginForm.handleBlur('email');
-                    }}
+                    onChangeText={(text) => loginForm.handleChange('email', text)}
+                    onBlur={() => loginForm.handleBlur('email')}
                     error={loginForm.getFieldError('email')}
                     placeholder="votre@email.com"
                     keyboardType="email-address"
@@ -515,33 +470,6 @@ export default function AuthScreen() {
                     </Text>
                   </TouchableOpacity>
 
-                  {/* Bouton debug temporaire */}
-                  <TouchableOpacity 
-                    onPress={() => {
-                      console.log('DEBUG: Force setting OTP sent to true');
-                      setOtpSent(true);
-                      setOtpEmail(loginForm.formData.email || 'test@test.com');
-                    }}
-                    style={[styles.forgotPasswordButton, { alignSelf: 'center', marginTop: 16 }]}
-                  >
-                    <Text style={[styles.forgotPasswordText, { color: colors.error }]}>
-                      [DEBUG] Forcer écran code
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    onPress={() => {
-                      console.log('DEBUG: Manual handleLogin test');
-                      console.log('Current email:', loginForm.formData.email);
-                      console.log('Form valid:', loginForm.validateForm());
-                      handleLogin();
-                    }}
-                    style={[styles.forgotPasswordButton, { alignSelf: 'center', marginTop: 8 }]}
-                  >
-                    <Text style={[styles.forgotPasswordText, { color: colors.error }]}>
-                      [DEBUG] Test handleLogin
-                    </Text>
-                  </TouchableOpacity>
                 </>
               ) : (
                 <>

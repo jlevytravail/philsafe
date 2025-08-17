@@ -30,6 +30,7 @@ export interface Database {
           full_name: string | null;
           email: string | null;
           role: 'aidant' | 'intervenant' | null;
+          sub_role: string | null;
           phone_number: string | null;
           created_at: string;
         };
@@ -38,6 +39,7 @@ export interface Database {
           full_name?: string | null;
           email?: string | null;
           role?: 'aidant' | 'intervenant' | null;
+          sub_role?: string | null;
           phone_number?: string | null;
           created_at?: string;
         };
@@ -46,6 +48,7 @@ export interface Database {
           full_name?: string | null;
           email?: string | null;
           role?: 'aidant' | 'intervenant' | null;
+          sub_role?: string | null;
           phone_number?: string | null;
           created_at?: string;
         };

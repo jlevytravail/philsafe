@@ -7,13 +7,16 @@ import NotificationService from '@/utils/notifications';
 import { Notification } from '@/types';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useSessionUser, useUser } from '@/context/UserContext';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [emergencyAlertsEnabled, setEmergencyAlertsEnabled] = React.useState(true);
   const { colors } = useThemeContext();
-  const { profile, role, signOut, updateProfile } = useAuth();
+  const { signOut } = useAuth();
+  const { profile } = useSessionUser();
+  const { updateUserProfile } = useUser();
 
   const triggerTestNotification = () => {
     const testNotification: Notification = {
@@ -33,7 +36,7 @@ export default function SettingsScreen() {
   };
 
   const handleRoleUpdate = async (newRole: 'intervenant' | 'aidant') => {
-    const { error } = await updateProfile({ role: newRole });
+    const { error } = await updateUserProfile({ role: newRole });
     if (error) {
       console.error('Erreur lors de la mise à jour du rôle:', error);
     }
@@ -46,15 +49,15 @@ export default function SettingsScreen() {
         <TouchableOpacity
           style={[
             styles.roleOption,
-            role === 'aidant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
+            profile?.role === 'aidant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
           ]}
           onPress={() => handleRoleUpdate('aidant')}
         >
-          <Users size={16} color={role === 'aidant' ? '#FFFFFF' : colors.textTertiary} />
+          <Users size={16} color={profile?.role === 'aidant' ? '#FFFFFF' : colors.textTertiary} />
           <Text style={[
             styles.roleOptionText,
             { color: colors.textTertiary },
-            role === 'aidant' && styles.activeRoleOptionText
+            profile?.role === 'aidant' && styles.activeRoleOptionText
           ]}>
             Proche aidant
           </Text>
@@ -63,15 +66,15 @@ export default function SettingsScreen() {
         <TouchableOpacity
           style={[
             styles.roleOption,
-            role === 'intervenant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
+            profile?.role === 'intervenant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
           ]}
           onPress={() => handleRoleUpdate('intervenant')}
         >
-          <UserCheck size={16} color={role === 'intervenant' ? '#FFFFFF' : colors.textTertiary} />
+          <UserCheck size={16} color={profile?.role === 'intervenant' ? '#FFFFFF' : colors.textTertiary} />
           <Text style={[
             styles.roleOptionText,
             { color: colors.textTertiary },
-            role === 'intervenant' && styles.activeRoleOptionText
+            profile?.role === 'intervenant' && styles.activeRoleOptionText
           ]}>
             Professionnel de santé
           </Text>
@@ -274,7 +277,7 @@ export default function SettingsScreen() {
           <SettingItem
             icon={<User size={20} color="#6B7280" />}
             title={profile?.full_name || 'Utilisateur'}
-            subtitle={role === 'aidant' ? 'Proche aidant' : 'Professionnel de santé'}
+            subtitle={profile?.role === 'aidant' ? 'Proche aidant' : 'Professionnel de santé'}
           />
           <SettingItem
             icon={<Phone size={20} color="#6B7280" />}

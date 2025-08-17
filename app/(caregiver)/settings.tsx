@@ -5,20 +5,23 @@ import { Settings, User, Bell, Heart, Phone, Mail, Shield, CircleHelp as HelpCir
 import { LogOut } from 'lucide-react-native';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useSessionUser, useUser } from '@/context/UserContext';
 import ThemeToggle from '@/components/ThemeToggle';
 
 export default function CaregiverSettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [emergencyAlertsEnabled, setEmergencyAlertsEnabled] = React.useState(true);
   const { colors } = useThemeContext();
-  const { profile, role, signOut, updateProfile } = useAuth();
+  const { signOut } = useAuth();
+  const { profile } = useSessionUser();
+  const { updateUserProfile } = useUser();
 
   const handleSignOut = async () => {
     await signOut();
   };
 
   const handleRoleUpdate = async (newRole: 'intervenant' | 'aidant') => {
-    const { error } = await updateProfile({ role: newRole });
+    const { error } = await updateUserProfile({ role: newRole });
     if (error) {
       console.error('Erreur lors de la mise à jour du rôle:', error);
     }
@@ -58,15 +61,15 @@ export default function CaregiverSettingsScreen() {
         <TouchableOpacity
           style={[
             styles.roleOption,
-            role === 'aidant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
+            profile?.role === 'aidant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
           ]}
           onPress={() => handleRoleUpdate('aidant')}
         >
-          <Users size={16} color={role === 'aidant' ? '#FFFFFF' : colors.textTertiary} />
+          <Users size={16} color={profile?.role === 'aidant' ? '#FFFFFF' : colors.textTertiary} />
           <Text style={[
             styles.roleOptionText,
             { color: colors.textTertiary },
-            role === 'aidant' && styles.activeRoleOptionText
+            profile?.role === 'aidant' && styles.activeRoleOptionText
           ]}>
             Proche aidant
           </Text>
@@ -75,15 +78,15 @@ export default function CaregiverSettingsScreen() {
         <TouchableOpacity
           style={[
             styles.roleOption,
-            role === 'intervenant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
+            profile?.role === 'intervenant' && [styles.activeRoleOption, { backgroundColor: colors.primary }]
           ]}
           onPress={() => handleRoleUpdate('intervenant')}
         >
-          <UserCheck size={16} color={role === 'intervenant' ? '#FFFFFF' : colors.textTertiary} />
+          <UserCheck size={16} color={profile?.role === 'intervenant' ? '#FFFFFF' : colors.textTertiary} />
           <Text style={[
             styles.roleOptionText,
             { color: colors.textTertiary },
-            role === 'intervenant' && styles.activeRoleOptionText
+            profile?.role === 'intervenant' && styles.activeRoleOptionText
           ]}>
             Professionnel de santé
           </Text>

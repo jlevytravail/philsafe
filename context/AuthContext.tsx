@@ -8,10 +8,10 @@ type UserProfile = Database['public']['Tables']['users']['Row'];
 interface AuthContextType {
   session: Session | null;
   user: User | null;
-  profile: UserProfile | null;
-  role: 'aidant' | 'intervenant' | null;
   loading: boolean;
   error: string | null;
+  otpSent: boolean;
+  otpEmail: string;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, fullName: string, role: 'aidant' | 'intervenant') => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
@@ -19,8 +19,8 @@ interface AuthContextType {
   signInWithOAuth: (provider: 'google' | 'apple' | 'facebook') => Promise<{ error?: string }>;
   signInWithOtp: (email: string) => Promise<{ error?: string }>;
   verifyOtp: (email: string, token: string) => Promise<{ error?: string }>;
-  updateProfile: (updates: Partial<UserProfile>) => Promise<{ error?: string }>;
   clearError: () => void;
+  clearOtpState: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,9 +28,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -51,12 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setSession(session);
         setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-        } else {
-          setLoading(false);
-        }
+        setLoading(false);
       } catch (err) {
         if (!mounted) return;
         console.error('Erreur inattendue lors de l\'initialisation:', err);
@@ -86,18 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (event === 'SIGNED_OUT') {
           console.log('User signed out');
-          setProfile(null);
         }
         
         setSession(session);
         setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
+        setLoading(false);
       }
     );
 
@@ -106,39 +95,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      console.log('Fetching profile for user:', userId);
-      
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Erreur lors de la récupération du profil:', error);
-        
-        // Si l'utilisateur n'existe pas dans la table users
-        if (error.code === 'PGRST116') {
-          console.log('Profil utilisateur non trouvé - il sera créé automatiquement lors de la prochaine inscription');
-          // Ne pas créer de profil ici, laisser le processus de signup le faire
-          setProfile(null);
-        } else {
-          setError('Erreur lors de la récupération du profil utilisateur');
-        }
-      } else {
-        console.log('Profile fetched successfully:', data);
-        setProfile(data);
-      }
-    } catch (err) {
-      console.error('Erreur inattendue lors de la récupération du profil:', err);
-      setError('Une erreur inattendue s\'est produite');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const signIn = async (email: string, password: string, rememberMe = false) => {
     try {
@@ -423,58 +379,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const updateProfile = async (updates: Partial<UserProfile>) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      if (!user) {
-        return { error: 'Utilisateur non connecté' };
-      }
-
-      console.log('Updating profile for user:', user.id, 'with updates:', updates);
-
-      const { data, error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', user.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Profile update error:', error);
-        setError('Erreur lors de la mise à jour du profil');
-        Toast.show({
-          type: 'error',
-          text1: 'Erreur',
-          text2: 'Erreur lors de la mise à jour du profil',
-        });
-        return { error: 'Erreur lors de la mise à jour du profil' };
-      }
-
-      console.log('Profile updated successfully:', data);
-      setProfile(data);
-      Toast.show({
-        type: 'success',
-        text1: 'Profil mis à jour',
-        text2: 'Vos informations ont été sauvegardées',
-      });
-
-      return { error: undefined };
-    } catch (err) {
-      console.error('Unexpected profile update error:', err);
-      const errorMessage = 'Une erreur inattendue s\'est produite';
-      setError(errorMessage);
-      Toast.show({
-        type: 'error',
-        text1: 'Erreur',
-        text2: errorMessage,
-      });
-      return { error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const signInWithOtp = async (email: string) => {
     try {
@@ -482,10 +386,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(null);
       
       console.log('Attempting OTP sign in for:', email);
-      console.log('Supabase client config:', {
-        url: supabase.supabaseUrl,
-        key: supabase.supabaseKey?.substring(0, 20) + '...'
-      });
+      console.log('Attempting OTP sign in');
       
       const { data, error } = await supabase.auth.signInWithOtp({
         email: email.trim().toLowerCase(),
@@ -520,6 +421,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log('OTP email sent successfully');
+      
+      // Mettre à jour les états OTP
+      setOtpSent(true);
+      setOtpEmail(email.trim().toLowerCase());
+      
       Toast.show({
         type: 'success',
         text1: 'Code envoyé',
@@ -580,6 +486,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       console.log('OTP verification successful');
+      
+      // Nettoyer les états OTP après connexion réussie
+      setOtpSent(false);
+      setOtpEmail('');
+      
       Toast.show({
         type: 'success',
         text1: 'Connexion réussie',
@@ -606,14 +517,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
   };
 
+  const clearOtpState = () => {
+    setOtpSent(false);
+    setOtpEmail('');
+  };
+
   return (
     <AuthContext.Provider value={{
       session,
       user,
-      profile,
-      role: profile?.role || null,
       loading,
       error,
+      otpSent,
+      otpEmail,
       signIn,
       signUp,
       signOut,
@@ -621,8 +537,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithOAuth,
       signInWithOtp,
       verifyOtp,
-      updateProfile,
       clearError,
+      clearOtpState,
     }}>
       {children}
     </AuthContext.Provider>

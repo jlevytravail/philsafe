@@ -8,12 +8,16 @@ import WeekPreview from '@/components/WeekPreview';
 import { caregivers } from '@/data/mockData';
 import { useVisits } from '@/context/VisitContext';
 import { useThemeContext } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
+import { useSessionUser } from '@/context/UserContext';
 
 export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const { visits, events, resetVisits } = useVisits();
   const { colors } = useThemeContext();
+  const { signOut } = useAuth();
+  const { session, profile } = useSessionUser();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -156,7 +160,7 @@ export default function Dashboard() {
           
           <TouchableOpacity onPress={handleManualRefresh} style={[styles.refreshButton, { backgroundColor: colors.primaryLight }]}>
             <RefreshCw size={16} color="#3B82F6" />
-            <Text style={[styles.refreshText, { color: colors.primary }]}>Rafraîchir les données</Text>
+            <Text style={[styles.refreshText, { color: colors.primary }]}>Rafraîchir</Text>
           </TouchableOpacity>
         </View>
 

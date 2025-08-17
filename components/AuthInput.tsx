@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, TextInputProps } f
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useThemeContext } from '@/context/ThemeContext';
 
-interface AuthInputProps extends Omit<TextInputProps, 'style'> {
+interface AuthInputProps extends Omit<TextInputProps, 'style' | 'onBlur'> {
   label: string;
   icon?: React.ReactNode;
   error?: string;
@@ -99,13 +99,11 @@ export default function AuthInput({
 
   const handleFocus = () => {
     setIsFocused(true);
-    textInputProps.onFocus?.();
   };
 
   const handleBlur = () => {
     setIsFocused(false);
     onBlur?.();
-    textInputProps.onBlur?.();
   };
 
   return (
@@ -137,7 +135,6 @@ export default function AuthInput({
           onBlur={handleBlur}
           accessibilityLabel={label}
           accessibilityHint={error || undefined}
-          accessibilityRequired={required}
         />
         
         {isPassword && (
