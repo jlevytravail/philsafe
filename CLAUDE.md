@@ -86,7 +86,7 @@ npx kill-port 8081
   - aidant → `/(tabs)`
   - intervenant → `/(caregiver)`
 
-## 🆕 Gestion des profils utilisateurs - EN COURS
+## ✅ Gestion des profils utilisateurs - TERMINÉ
 
 ### Architecture implémentée (17 août 2025)
 
@@ -111,6 +111,53 @@ Connexion OTP → UserContext fetch profil →
 ├── Profil complet → Redirection selon rôle (aidant/intervenant)
 └── Profil incomplet → Écran "/complete-profile" → Completion → Redirection
 ```
+
+## 🎯 Navigation par rôles - TERMINÉ (17 août 2025)
+
+### Objectif accompli : Router vers les bons écrans en fonction de users.role
+
+**RoleGuard implémenté :**
+- ✅ **RoleGuard component** : Contrôle d'accès basé sur le rôle utilisateur
+- ✅ **États de loading** : Gestion pendant que session/profil se chargent
+- ✅ **Navigation conditionnelle** : Redirection automatique selon le rôle
+
+### Stacks définies par rôle
+
+**Stack Aidant (`(tabs)`)** - role='aidant' :
+- ✅ **Accueil** : Dashboard avec visites et événements
+- ✅ **Notifications** : Alertes en temps réel  
+- ✅ **Calendrier** : Planning des visites
+- ✅ **Historique** : Visites passées et rapports
+- ✅ **Paramètres** : Configuration utilisateur
+
+**Stack Intervenant (`(caregiver)`)** - role='intervenant' :
+- ✅ **Tournée** : Tournée du jour avec RDV
+- ✅ **Patients** : Fiches patients avec détails médicaux
+- ✅ **Calendrier** : Planning professionnel
+- ✅ **Rapports** : Création et gestion des rapports de soins
+- ✅ **Paramètres** : Configuration professionnelle
+
+### Navigation intelligente
+
+**AuthNavigator amélioré :**
+- ✅ **Détection automatique** du rôle utilisateur
+- ✅ **Protection croisée** : Redirection si utilisateur dans mauvaise stack
+- ✅ **useRoleNavigation hook** : Utilitaires pour navigation basée sur les rôles
+
+### Tests et développement
+
+**Panel de test DEV :**
+- ✅ **RoleTestingPanel** : Visible uniquement en développement (__DEV__)
+- ✅ **Changement dynamique** : Boutons pour basculer aidant ↔ intervenant
+- ✅ **Navigation automatique** : Redirection immédiate après changement
+- ✅ **Logs détaillés** : Traçabilité complète du processus
+
+### Comment tester le changement de rôle
+
+1. **Aller dans Paramètres** (n'importe quelle stack)
+2. **Panel de test** affiché automatiquement en mode DEV
+3. **Cliquer "Basculer vers X"** → Navigation automatique vers nouvelle stack
+4. **Critère validé** : Le changement de rôle change de stack instantanément
 
 ### Issues résolues (17 août 2025)
 
@@ -146,10 +193,38 @@ Connexion OTP → UserContext fetch profil →
 2. Sera redirigé vers `/auth` 
 3. Tester le flow : Email → OTP → Completion profil → Home
 
+## 📋 Architecture actuelle (17 août 2025)
+
+### Fichiers clés ajoutés/modifiés
+
+**Navigation et rôles :**
+- ✅ `components/RoleGuard.tsx` : Contrôleur d'accès par rôle
+- ✅ `hooks/useRoleNavigation.ts` : Utilitaires navigation basée sur les rôles
+- ✅ `components/RoleTestingPanel.tsx` : Panel de test DEV pour changement de rôle
+
+**Nouvelles pages :**
+- ✅ `app/(tabs)/history.tsx` : Historique des visites pour aidants
+- ✅ `app/(caregiver)/patients.tsx` : Gestion des patients pour intervenants  
+- ✅ `app/(caregiver)/reports.tsx` : Rapports de soins pour intervenants
+- ✅ `context/UserContext.tsx` : Gestion des profils utilisateur
+- ✅ `app/complete-profile.tsx` : Écran de complétion de profil
+
+**Layouts modifiés :**
+- ✅ `app/(tabs)/_layout.tsx` : Stack aidants avec RoleGuard
+- ✅ `app/(caregiver)/_layout.tsx` : Stack intervenants avec RoleGuard
+- ✅ `app/_layout.tsx` : Navigation intelligente avec détection de rôle
+
+### État actuel du système
+
+**✅ Authentification OTP** : Complètement fonctionnelle avec codes 6 chiffres
+**✅ Gestion des profils** : UserContext avec complétion automatique
+**✅ Navigation par rôles** : RoleGuard et redirection automatique
+**✅ Stacks spécialisées** : Interfaces dédiées aidants vs intervenants
+
 ### Prochaine session
 
-1. **Tester le flow complet** : Logout → OTP → profil incomplet → completion → home *(PRIORITÉ)*
+1. **Remplacer les données mock** : Connecter les vraies données Supabase *(PRIORITÉ)*
 2. **Amélioration UX :** Ajouter des indicateurs de chargement et animations
-3. **Tests :** Ajouter des tests automatisés pour le flow d'authentification
-4. **Données réelles :** Remplacer les données mock par de vraies requêtes Supabase
-5. **Sécurité :** Validation côté serveur et gestion des erreurs avancée
+3. **Tests :** Ajouter des tests automatisés pour le flow d'authentification complet
+4. **Sécurité :** Validation côté serveur et gestion des erreurs avancée
+5. **Optimisation :** Performance et gestion des états complexes

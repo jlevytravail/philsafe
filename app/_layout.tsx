@@ -85,11 +85,22 @@ function AuthNavigator() {
 
     // Session + profil complet → redirection selon le rôle
     if (session && profile && isProfileComplete) {
-      if (profile.role === 'aidant' && !inTabsGroup) {
-        console.log('Aidant role, redirecting to tabs');
+      const userRole = profile.role;
+      
+      // Vérifier si l'utilisateur est dans la bonne stack selon son rôle
+      if (userRole === 'aidant' && !inTabsGroup) {
+        console.log('Aidant role detected, redirecting to tabs');
         navigate('/(tabs)');
-      } else if (profile.role === 'intervenant' && !inCaregiverGroup) {
-        console.log('Intervenant role, redirecting to caregiver');
+      } else if (userRole === 'intervenant' && !inCaregiverGroup) {
+        console.log('Intervenant role detected, redirecting to caregiver');
+        navigate('/(caregiver)');
+      }
+      // Si l'utilisateur aidant est dans la stack intervenant ou vice versa, rediriger
+      else if (userRole === 'aidant' && inCaregiverGroup) {
+        console.log('Aidant in caregiver stack, redirecting to tabs');
+        navigate('/(tabs)');
+      } else if (userRole === 'intervenant' && inTabsGroup) {
+        console.log('Intervenant in tabs stack, redirecting to caregiver');
         navigate('/(caregiver)');
       }
     }

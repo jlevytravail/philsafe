@@ -8,15 +8,19 @@ import { Notification } from '@/types';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useSessionUser, useUser } from '@/context/UserContext';
+import { useRoleNavigation } from '@/hooks/useRoleNavigation';
 import ThemeToggle from '@/components/ThemeToggle';
+import RoleTestingPanel from '@/components/RoleTestingPanel';
 
 export default function SettingsScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [emergencyAlertsEnabled, setEmergencyAlertsEnabled] = React.useState(true);
+  const [showRoleTesting, setShowRoleTesting] = React.useState(__DEV__); // Afficher seulement en dev
   const { colors } = useThemeContext();
   const { signOut } = useAuth();
   const { profile } = useSessionUser();
   const { updateUserProfile } = useUser();
+  const { navigateToCurrentRoleHome } = useRoleNavigation();
 
   const triggerTestNotification = () => {
     const testNotification: Notification = {
@@ -36,9 +40,16 @@ export default function SettingsScreen() {
   };
 
   const handleRoleUpdate = async (newRole: 'intervenant' | 'aidant') => {
+    console.log('Changing role to:', newRole);
     const { error } = await updateUserProfile({ role: newRole });
     if (error) {
       console.error('Erreur lors de la mise à jour du rôle:', error);
+    } else {
+      console.log('Role updated successfully, navigating to new role home');
+      // Naviguer vers la nouvelle interface après changement de rôle
+      setTimeout(() => {
+        navigateToCurrentRoleHome();
+      }, 500); // Petit délai pour que le contexte se mette à jour
     }
   };
 
@@ -359,6 +370,11 @@ export default function SettingsScreen() {
             onPress={handleSignOut}
           />
         </View>
+
+        {/* Panel de test pour les rôles (DEV uniquement) */}
+        {showRoleTesting && (
+          <RoleTestingPanel onClose={() => setShowRoleTesting(false)} />
+        )}
 
         <View style={styles.footer}>
           <Text style={[styles.appVersion, { color: colors.textTertiary }]}>PhilSafe v1.0.0</Text>
