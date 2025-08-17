@@ -1,53 +1,31 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, User, MapPin, Phone, Calendar, ChevronRight } from 'lucide-react-native';
+import { Search, User, MapPin, Phone, ChevronRight } from 'lucide-react-native';
 import { useThemeContext } from '@/context/ThemeContext';
+import { usePatients } from '@/src/hooks/usePatients';
 import { router } from 'expo-router';
-
-// Mock data pour les patients
-const mockPatients = [
-  {
-    id: '1',
-    name: 'Marie Dupont',
-    age: 78,
-    address: '15 rue de la Paix, 75001 Paris',
-    phone: '01 23 45 67 89',
-    lastVisit: '2025-08-15',
-    nextVisit: '2025-08-18',
-    status: 'active',
-    conditions: ['Diabète', 'Hypertension'],
-  },
-  {
-    id: '2',
-    name: 'Jean Martin',
-    age: 82,
-    address: '8 avenue Victor Hugo, 75016 Paris',
-    phone: '01 98 76 54 32',
-    lastVisit: '2025-08-14',
-    nextVisit: '2025-08-19',
-    status: 'active',
-    conditions: ['Alzheimer'],
-  },
-  {
-    id: '3',
-    name: 'Françoise Blanc',
-    age: 75,
-    address: '22 boulevard Saint-Germain, 75005 Paris',
-    phone: '01 11 22 33 44',
-    lastVisit: '2025-08-13',
-    nextVisit: '2025-08-20',
-    status: 'active',
-    conditions: ['Mobilité réduite'],
-  },
-];
 
 export default function PatientsScreen() {
   const { colors } = useThemeContext();
+  const { patients, loading, error } = usePatients();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredPatients = mockPatients.filter(patient =>
-    patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const calculateAge = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
+  const filteredPatients = patients.filter(patient =>
+    patient.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     patient.address.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -217,7 +195,21 @@ export default function PatientsScreen() {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.section}>
-          {filteredPatients.length > 0 ? (
+          {loading ? (
+            <View style={styles.emptyState}>
+              <User size={48} color={colors.textTertiary} />
+              <Text style={styles.emptyText}>
+                Chargement des patients...
+              </Text>
+            </View>
+          ) : error ? (
+            <View style={styles.emptyState}>
+              <User size={48} color={colors.textTertiary} />
+              <Text style={styles.emptyText}>
+                Erreur: {error}
+              </Text>
+            </View>
+          ) : filteredPatients.length > 0 ? (
             filteredPatients.map(patient => (
               <TouchableOpacity 
                 key={patient.id} 
@@ -226,8 +218,8 @@ export default function PatientsScreen() {
               >
                 <View style={styles.patientHeader}>
                   <View style={styles.patientInfo}>
-                    <Text style={styles.patientName}>{patient.name}</Text>
-                    <Text style={styles.patientAge}>{patient.age} ans</Text>
+                    <Text style={styles.patientName}>{patient.full_name}</Text>
+                    <Text style={styles.patientAge}>{calculateAge(patient.birth_date)} ans</Text>
                   </View>
                   <ChevronRight size={20} color={colors.textTertiary} style={styles.chevronIcon} />
                 </View>
@@ -237,31 +229,15 @@ export default function PatientsScreen() {
                     <MapPin size={16} color={colors.textTertiary} />
                     <Text style={styles.detailText}>{patient.address}</Text>
                   </View>
-                  
-                  <View style={styles.detailRow}>
-                    <Phone size={16} color={colors.textTertiary} />
-                    <Text style={styles.detailText}>{patient.phone}</Text>
-                  </View>
                 </View>
 
-                <View style={styles.conditions}>
-                  {patient.conditions.map((condition, index) => (
-                    <View key={index} style={styles.conditionTag}>
-                      <Text style={styles.conditionText}>{condition}</Text>
+                {patient.medical_notes && (
+                  <View style={styles.conditions}>
+                    <View style={styles.conditionTag}>
+                      <Text style={styles.conditionText}>Voir notes médicales</Text>
                     </View>
-                  ))}
-                </View>
-
-                <View style={styles.visitInfo}>
-                  <View style={styles.visitItem}>
-                    <Text style={styles.visitLabel}>Dernière visite</Text>
-                    <Text style={styles.visitDate}>{formatDate(patient.lastVisit)}</Text>
                   </View>
-                  <View style={styles.visitItem}>
-                    <Text style={styles.visitLabel}>Prochaine visite</Text>
-                    <Text style={styles.visitDate}>{formatDate(patient.nextVisit)}</Text>
-                  </View>
-                </View>
+                )}
               </TouchableOpacity>
             ))
           ) : (

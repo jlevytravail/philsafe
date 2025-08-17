@@ -5,8 +5,7 @@ import { Heart, Activity, RefreshCw } from 'lucide-react-native';
 import VisitCard from '@/components/VisitCard';
 import EventCard from '@/components/EventCard';
 import WeekPreview from '@/components/WeekPreview';
-import { caregivers } from '@/data/mockData';
-import { useVisits } from '@/context/VisitContext';
+import { useTodayInterventions } from '@/src/hooks/useInterventions';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useSessionUser } from '@/context/UserContext';
@@ -14,7 +13,7 @@ import { useSessionUser } from '@/context/UserContext';
 export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { visits, events, resetVisits } = useVisits();
+  const { interventions, loading, error, refetch } = useTodayInterventions();
   const { colors } = useThemeContext();
   const { signOut } = useAuth();
   const { session, profile } = useSessionUser();
@@ -29,31 +28,56 @@ export default function Dashboard() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    resetVisits();
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    await refetch();
+    setRefreshing(false);
   };
 
   const handleManualRefresh = () => {
-    resetVisits();
+    refetch();
   };
 
-  const getTodayVisits = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return visits.filter(visit => visit.date === today);
-  };
+  // Transformer les interventions en format compatible avec les composants existants
+  const formatInterventionAsVisit = (intervention: any) => ({
+    id: intervention.id,
+    caregiverId: intervention.intervenant_id,
+    date: intervention.scheduled_start.split('T')[0],
+    startTime: new Date(intervention.scheduled_start).toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    endTime: new Date(intervention.scheduled_end).toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    status: intervention.status === 'planned' ? 'scheduled' : 
+            intervention.status === 'done' ? 'completed' : 'cancelled',
+    careType: intervention.notes || [],
+    patientName: intervention.patient?.full_name || 'Patient inconnu',
+    address: intervention.patient?.address || ''
+  });
 
-  const getRecentEvents = () => {
-    return events.slice(0, 3);
-  };
+  const formatInterventionAsEvent = (intervention: any) => ({
+    id: intervention.id,
+    visitId: intervention.id,
+    type: intervention.status === 'done' ? 'check-out' : 'check-in',
+    message: `${intervention.intervenant?.full_name || 'Intervenant'} - ${intervention.patient?.full_name}`,
+    timestamp: intervention.scheduled_start
+  });
+
+  const todayVisits = interventions.map(formatInterventionAsVisit);
+  const recentEvents = interventions.slice(0, 3).map(formatInterventionAsEvent);
 
   const getCaregiverById = (id: string) => {
-    return caregivers.find(c => c.id === id);
+    // Simuler un caregiver basé sur l'intervention
+    const intervention = interventions.find(i => i.intervenant_id === id);
+    return intervention?.intervenant ? {
+      id: intervention.intervenant.id,
+      name: intervention.intervenant.full_name,
+      role: intervention.intervenant.sub_role || 'Intervenant',
+      phone: '',
+      photo: ''
+    } : null;
   };
-
-  const todayVisits = getTodayVisits();
-  const recentEvents = getRecentEvents();
 
   const styles = StyleSheet.create({
     container: {
@@ -177,9 +201,17 @@ export default function Dashboard() {
                 <VisitCard key={visit.id} visit={visit} caregiver={caregiver} />
               ) : null;
             })
+          ) : loading ? (
+            <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Chargement des interventions...</Text>
+            </View>
+          ) : error ? (
+            <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Erreur: {error}</Text>
+            </View>
           ) : (
             <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Aucune visite prévue aujourd'hui</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Aucune intervention prévue aujourd'hui</Text>
             </View>
           )}
         </View>
@@ -191,7 +223,7 @@ export default function Dashboard() {
           ))}
         </View>
 
-        <WeekPreview visits={visits} caregivers={caregivers} />
+        <WeekPreview visits={todayVisits} caregivers={[]} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -3,37 +3,51 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Clock, MapPin, User, Activity } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { useVisits } from '@/context/VisitContext';
-import { caregivers } from '@/data/mockData';
+// import { useTodayInterventions } from '@/src/hooks/useInterventions';
+import { useInterventionsDebug } from '@/src/hooks/useInterventionsDebug';
 import { useThemeContext } from '@/context/ThemeContext';
 
 export default function AppointmentsScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
-  const { visits } = useVisits();
+  const { interventions, loading, error, refetch } = useInterventionsDebug();
   const { colors } = useThemeContext();
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    await refetch();
+    setRefreshing(false);
   };
 
-  const getTodayAppointments = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return visits.filter(visit => visit.date === today);
-  };
+  // Transformer les interventions en format appointments
+  const formatInterventionAsAppointment = (intervention: any) => ({
+    id: intervention.id,
+    startTime: new Date(intervention.scheduled_start).toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    endTime: new Date(intervention.scheduled_end).toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }),
+    status: intervention.status === 'planned' ? 'scheduled' : 
+            intervention.status === 'done' ? 'completed' : 'cancelled',
+    patientName: intervention.patient?.full_name || 'Patient inconnu',
+    address: intervention.patient?.address,
+    careType: intervention.notes || []
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'done':
         return '#10B981';
       case 'in-progress':
         return '#F59E0B';
       case 'scheduled':
+      case 'planned':
         return '#6B7280';
       case 'cancelled':
+      case 'missed':
         return '#EF4444';
       default:
         return '#6B7280';
@@ -43,19 +57,22 @@ export default function AppointmentsScreen() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'done':
         return 'Terminé';
       case 'in-progress':
         return 'En cours';
       case 'scheduled':
+      case 'planned':
         return 'Prévu';
       case 'cancelled':
+      case 'missed':
         return 'Annulé';
       default:
         return 'Inconnu';
     }
   };
 
-  const todayAppointments = getTodayAppointments();
+  const todayAppointments = interventions.map(formatInterventionAsAppointment);
 
   const styles = StyleSheet.create({
     container: {
@@ -209,7 +226,23 @@ export default function AppointmentsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {todayAppointments.length > 0 ? (
+        {loading ? (
+          <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
+            <Activity size={48} color={colors.textTertiary} />
+            <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>Chargement...</Text>
+            <Text style={[styles.emptyMessage, { color: colors.textTertiary }]}>
+              Récupération de vos rendez-vous
+            </Text>
+          </View>
+        ) : error ? (
+          <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
+            <Activity size={48} color={colors.textTertiary} />
+            <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>Erreur</Text>
+            <Text style={[styles.emptyMessage, { color: colors.textTertiary }]}>
+              {error}
+            </Text>
+          </View>
+        ) : todayAppointments.length > 0 ? (
           todayAppointments.map(appointment => (
             <TouchableOpacity
               key={appointment.id}
