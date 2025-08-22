@@ -1,20 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Heart, Activity, RefreshCw } from 'lucide-react-native';
-import VisitCard from '@/components/VisitCard';
-import EventCard from '@/components/EventCard';
-import WeekPreview from '@/components/WeekPreview';
-import { caregivers } from '@/data/mockData';
-import { useVisits } from '@/context/VisitContext';
+import { Heart, Activity, RefreshCw, Database, Bell, Calendar } from 'lucide-react-native';
+import InterventionCard from '@/components/InterventionCard';
+import { useTodayInterventions } from '@/hooks/useInterventions';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useSessionUser } from '@/context/UserContext';
+import { router } from 'expo-router';
 
 export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { visits, events, resetVisits } = useVisits();
+  const { 
+    interventions, 
+    loading, 
+    error, 
+    refetch,
+    updateInterventionStatus 
+  } = useTodayInterventions();
+  const { 
+    notifications, 
+    getRecentNotificationsCount 
+  } = useNotifications();
   const { colors } = useThemeContext();
   const { signOut } = useAuth();
   const { session, profile } = useSessionUser();
@@ -29,31 +38,67 @@ export default function Dashboard() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    resetVisits();
-    setTimeout(() => {
+    try {
+      await refetch();
+    } catch (err) {
+      console.error('Erreur lors du rafraîchissement:', err);
+    } finally {
       setRefreshing(false);
-    }, 1000);
+    }
   };
 
-  const handleManualRefresh = () => {
-    resetVisits();
+  const handleManualRefresh = async () => {
+    try {
+      await refetch();
+    } catch (err) {
+      Alert.alert('Erreur', 'Impossible de rafraîchir les données');
+    }
   };
 
-  const getTodayVisits = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return visits.filter(visit => visit.date === today);
+  const handleTestDataNavigation = () => {
+    router.push('/test-data');
   };
 
-  const getRecentEvents = () => {
-    return events.slice(0, 3);
+  const handleInterventionStatusUpdate = async (interventionId: string, status: 'planned' | 'done' | 'missed') => {
+    const success = await updateInterventionStatus(interventionId, status);
+    if (!success) {
+      Alert.alert('Erreur', 'Impossible de mettre à jour le statut de l\'intervention');
+    }
   };
 
-  const getCaregiverById = (id: string) => {
-    return caregivers.find(c => c.id === id);
+  // Obtenir le nom du patient principal (premier patient lié)
+  const getMainPatientName = () => {
+    if (interventions.length > 0 && interventions[0].patient) {
+      return interventions[0].patient.full_name.split(' ')[0]; // Prénom seulement
+    }
+    return 'Patient';
   };
 
-  const todayVisits = getTodayVisits();
-  const recentEvents = getRecentEvents();
+  const recentNotificationsCount = getRecentNotificationsCount();
+
+  // Fonction pour formater l'heure des notifications
+  const formatNotificationTime = (sentAt: string) => {
+    const date = new Date(sentAt);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+
+    if (diffMins < 1) {
+      return 'À l\'instant';
+    } else if (diffMins < 60) {
+      return `Il y a ${diffMins} min`;
+    } else if (diffHours < 24) {
+      return `Il y a ${diffHours}h`;
+    } else {
+      return date.toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -132,6 +177,113 @@ export default function Dashboard() {
       color: colors.textSecondary,
       textAlign: 'center',
     },
+    headerActions: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    testButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+    },
+    testText: {
+      marginLeft: 4,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    notificationBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#EF4444',
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginLeft: 'auto',
+    },
+    notificationCount: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '600',
+      marginLeft: 4,
+    },
+    loadingState: {
+      borderRadius: 12,
+      padding: 24,
+      alignItems: 'center',
+    },
+    loadingText: {
+      fontSize: 16,
+      textAlign: 'center',
+    },
+    errorState: {
+      borderRadius: 12,
+      padding: 24,
+      alignItems: 'center',
+    },
+    errorText: {
+      fontSize: 16,
+      textAlign: 'center',
+      marginBottom: 12,
+    },
+    retryButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    retryText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    notificationCard: {
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    notificationHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    notificationTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    notificationTime: {
+      fontSize: 12,
+    },
+    notificationMessage: {
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    calendarPreview: {
+      borderRadius: 12,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+    },
+    calendarText: {
+      fontSize: 16,
+      marginBottom: 4,
+    },
+    calendarCount: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    refreshingIndicator: {
+      borderRadius: 8,
+      padding: 12,
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    refreshingText: {
+      fontSize: 14,
+      fontWeight: '500',
+    },
   });
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -147,7 +299,7 @@ export default function Dashboard() {
             <Text style={[styles.title, { color: colors.text }]}>PhilSafe</Text>
           </View>
           <Text style={[styles.welcomeMessage, { color: colors.primary }]}>
-            Bonjour Claire, voici les dernières infos sur votre maman
+            Bonjour {profile?.full_name?.split(' ')[0] || 'Aidant'}, voici les dernières infos sur {getMainPatientName()}
           </Text>
           <Text style={[styles.currentTime, { color: colors.textTertiary }]}>
             {currentTime.toLocaleDateString('fr-FR', { 
@@ -158,40 +310,116 @@ export default function Dashboard() {
             })}
           </Text>
           
-          <TouchableOpacity onPress={handleManualRefresh} style={[styles.refreshButton, { backgroundColor: colors.primaryLight }]}>
-            <RefreshCw size={16} color="#3B82F6" />
-            <Text style={[styles.refreshText, { color: colors.primary }]}>Rafraîchir</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={handleManualRefresh} style={[styles.refreshButton, { backgroundColor: colors.primaryLight }]}>
+              <RefreshCw size={16} color="#3B82F6" />
+              <Text style={[styles.refreshText, { color: colors.primary }]}>Rafraîchir</Text>
+            </TouchableOpacity>
+            
+            {__DEV__ && (
+              <TouchableOpacity onPress={handleTestDataNavigation} style={[styles.testButton, { backgroundColor: colors.warning + '20' || '#FEF3C7' }]}>
+                <Database size={16} color={colors.warning || '#D97706'} />
+                <Text style={[styles.testText, { color: colors.warning || '#D97706' }]}>Test Data</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Activity size={20} color="#3B82F6" />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Visites d'aujourd'hui</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Interventions d'aujourd'hui</Text>
+            {recentNotificationsCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Bell size={16} color="#FFFFFF" />
+                <Text style={styles.notificationCount}>{recentNotificationsCount}</Text>
+              </View>
+            )}
           </View>
           
-          {todayVisits.length > 0 ? (
-            todayVisits.map(visit => {
-              const caregiver = getCaregiverById(visit.caregiverId);
-              return caregiver ? (
-                <VisitCard key={visit.id} visit={visit} caregiver={caregiver} />
-              ) : null;
-            })
+          {loading && interventions.length === 0 ? (
+            <View style={[styles.loadingState, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Chargement des interventions...</Text>
+            </View>
+          ) : error && interventions.length === 0 ? (
+            <View style={[styles.errorState, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.errorText, { color: colors.error || '#EF4444' }]}>Erreur: {error}</Text>
+              <TouchableOpacity onPress={handleManualRefresh} style={styles.retryButton}>
+                <Text style={[styles.retryText, { color: colors.primary }]}>Réessayer</Text>
+              </TouchableOpacity>
+            </View>
+          ) : interventions.length > 0 ? (
+            <>
+              {interventions.map(intervention => (
+                <InterventionCard 
+                  key={intervention.id} 
+                  intervention={intervention}
+                  onStatusUpdate={handleInterventionStatusUpdate}
+                />
+              ))}
+              {loading && (
+                <View style={[styles.refreshingIndicator, { backgroundColor: colors.primaryLight }]}>
+                  <Text style={[styles.refreshingText, { color: colors.primary }]}>Mise à jour...</Text>
+                </View>
+              )}
+            </>
           ) : (
             <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Aucune visite prévue aujourd'hui</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Aucune intervention prévue aujourd'hui</Text>
             </View>
           )}
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Derniers événements</Text>
-          {recentEvents.map(event => (
-            <EventCard key={event.id} event={event} />
+          <View style={styles.sectionHeader}>
+            <Bell size={20} color="#10B981" />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Dernières notifications</Text>
+          </View>
+          
+          {notifications.slice(0, 3).map(notification => (
+            <View key={notification.id} style={[styles.notificationCard, { backgroundColor: colors.surface }]}>
+              <View style={styles.notificationHeader}>
+                <Text style={[styles.notificationTitle, { color: colors.text }]}>
+                  {notification.type === 'check_in' ? 'Arrivée intervenant' : 
+                   notification.type === 'check_out' ? 'Intervention terminée' : 
+                   'Intervention manquée'}
+                </Text>
+                <Text style={[styles.notificationTime, { color: colors.textTertiary }]}>
+                  {formatNotificationTime(notification.sent_at)}
+                </Text>
+              </View>
+              <Text style={[styles.notificationMessage, { color: colors.textSecondary }]}>
+                {notification.type === 'check_in' ? 
+                  `L'intervenant est arrivé chez ${notification.intervention?.patient?.full_name}` :
+                  notification.type === 'check_out' ?
+                  `Les soins ont été terminés chez ${notification.intervention?.patient?.full_name}` :
+                  `Intervention manquée chez ${notification.intervention?.patient?.full_name}`
+                }
+              </Text>
+            </View>
           ))}
+          
+          {notifications.length === 0 && (
+            <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Aucune notification récente</Text>
+            </View>
+          )}
         </View>
 
-        <WeekPreview visits={visits} caregivers={caregivers} />
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Calendar size={20} color="#8B5CF6" />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Prochaines interventions</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={[styles.calendarPreview, { backgroundColor: colors.surface }]}
+            onPress={() => router.push('/(tabs)/calendar')}
+          >
+            <Text style={[styles.calendarText, { color: colors.textSecondary }]}>Voir le planning complet</Text>
+            <Text style={[styles.calendarCount, { color: colors.primary }]}>{interventions.length} intervention{interventions.length > 1 ? 's' : ''} aujourd'hui</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

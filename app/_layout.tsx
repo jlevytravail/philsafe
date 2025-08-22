@@ -54,6 +54,7 @@ function AuthNavigator() {
     const inCompleteProfile = segments[0] === 'complete-profile';
     const inTabsGroup = segments[0] === '(tabs)';
     const inCaregiverGroup = segments[0] === '(caregiver)';
+    const inDevRoute = segments[0] === 'test-data' || segments[0] === 'debug' || segments[0] === 'admin';
 
     // Utiliser setTimeout pour s'assurer que la navigation se fait après le rendu
     const navigate = (path: string) => {
@@ -83,8 +84,8 @@ function AuthNavigator() {
       return;
     }
 
-    // Session + profil complet → redirection selon le rôle
-    if (session && profile && isProfileComplete) {
+    // Session + profil complet → redirection selon le rôle (sauf routes de dev)
+    if (session && profile && isProfileComplete && !inDevRoute) {
       const userRole = profile.role;
       
       // Vérifier si l'utilisateur est dans la bonne stack selon son rôle

@@ -19,8 +19,10 @@ interface AuthContextType {
   signInWithOAuth: (provider: 'google' | 'apple' | 'facebook') => Promise<{ error?: string }>;
   signInWithOtp: (email: string) => Promise<{ error?: string }>;
   verifyOtp: (email: string, token: string) => Promise<{ error?: string }>;
+  signInAsDebugUser: () => Promise<{ error?: string }>; // Connexion debug
   clearError: () => void;
   clearOtpState: () => void;
+  debugAuthState: () => Promise<void>; // Diagnostic debug
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,15 +41,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Récupérer la session initiale
     const getInitialSession = async () => {
       try {
+        console.log('🔄 AuthContext: Initialisation, récupération de la session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (!mounted) return;
 
         if (error) {
-          console.error('Erreur lors de la récupération de la session:', error);
+          console.error('❌ AuthContext: Erreur lors de la récupération de la session:', error);
           setError('Erreur lors de l\'initialisation de la session');
           setLoading(false);
           return;
+        }
+
+        if (session) {
+          console.log('✅ AuthContext: Session initiale trouvée:', session.user?.email);
+        } else {
+          console.log('ℹ️ AuthContext: Aucune session initiale');
         }
 
         setSession(session);
@@ -55,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       } catch (err) {
         if (!mounted) return;
-        console.error('Erreur inattendue lors de l\'initialisation:', err);
+        console.error('❌ AuthContext: Erreur inattendue lors de l\'initialisation:', err);
         setError('Erreur lors de l\'initialisation de l\'application');
         setLoading(false);
       }
@@ -68,11 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if (!mounted) return;
 
-        console.log('Auth state changed:', event, session?.user?.id);
+        console.log('🔔 AuthContext: Auth state changed:', event, session?.user?.id);
         
         // Gestion spéciale pour les magic links
         if (event === 'SIGNED_IN' && session) {
-          console.log('User signed in via magic link or other method');
+          console.log('✅ AuthContext: User signed in via', event);
+          console.log('📧 User email:', session.user?.email);
+          console.log('⏰ Session expires at:', new Date(session.expires_at * 1000).toLocaleString());
+          
           Toast.show({
             type: 'success',
             text1: 'Connexion réussie',
@@ -81,7 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
+          console.log('👋 AuthContext: User signed out');
+        }
+
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('🔄 AuthContext: Token refreshed');
         }
         
         setSession(session);
@@ -265,12 +281,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
       
-      console.log('Attempting sign out');
+      console.log('🚪 AuthContext: Attempting sign out');
       
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error('Sign out error:', error);
+        console.error('❌ AuthContext: Sign out error:', error);
         setError('Erreur lors de la déconnexion');
         Toast.show({
           type: 'error',
@@ -278,7 +294,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           text2: 'Erreur lors de la déconnexion',
         });
       } else {
-        console.log('Sign out successful');
+        console.log('✅ AuthContext: Sign out successful');
+        
+        // Nettoyer explicitement les états locaux
+        setSession(null);
+        setUser(null);
+        setOtpSent(false);
+        setOtpEmail('');
+        setError(null);
+        
         Toast.show({
           type: 'success',
           text1: 'Déconnexion réussie',
@@ -286,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (err) {
-      console.error('Unexpected sign out error:', err);
+      console.error('❌ AuthContext: Unexpected sign out error:', err);
       setError('Une erreur inattendue s\'est produite');
       Toast.show({
         type: 'error',
@@ -522,6 +546,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOtpEmail('');
   };
 
+  const debugAuthState = async () => {
+    if (!__DEV__) return;
+    
+    console.log('🔍 DEBUG AuthContext: État actuel');
+    console.log('├── Session:', session ? `✅ ${session.user?.email}` : '❌ null');
+    console.log('├── User:', user ? `✅ ${user.email}` : '❌ null');
+    console.log('├── Loading:', loading);
+    console.log('├── Error:', error || 'null');
+    console.log('└── OTP:', { sent: otpSent, email: otpEmail });
+    
+    try {
+      const { data: { session: supaSession }, error } = await supabase.auth.getSession();
+      console.log('🔍 DEBUG Supabase getSession():', supaSession ? `✅ ${supaSession.user?.email}` : '❌ null');
+      if (error) console.log('├── Erreur:', error.message);
+      
+      const { data: { user: supaUser }, error: userError } = await supabase.auth.getUser();
+      console.log('🔍 DEBUG Supabase getUser():', supaUser ? `✅ ${supaUser.email}` : '❌ null');
+      if (userError) console.log('├── Erreur:', userError.message);
+    } catch (err) {
+      console.log('🔍 DEBUG Exception:', err);
+    }
+  };
+
+  const signInAsDebugUser = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔧 DEBUG: Connexion debug simplifiée avec OTP standard...');
+      
+      if (!__DEV__) {
+        throw new Error('La connexion debug n\'est disponible qu\'en mode développement');
+      }
+      
+      const debugEmail = 'jlevy.travail@gmail.com';
+      
+      // Utiliser le flow OTP standard qui fonctionne
+      console.log('🔧 DEBUG: Envoi OTP à', debugEmail);
+      
+      const result = await signInWithOtp(debugEmail);
+      
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      console.log('✅ DEBUG: OTP envoyé avec succès');
+      
+      Toast.show({
+        type: 'success',
+        text1: '🔧 Debug: Code envoyé',
+        text2: 'Vérifiez votre email et saisissez le code reçu (utilisation du flow OTP standard)',
+      });
+      
+      return { error: undefined };
+      
+    } catch (err: any) {
+      console.error('🔧 DEBUG: Erreur de connexion debug:', err);
+      const errorMessage = err.message || 'Erreur de connexion debug';
+      setError(errorMessage);
+      
+      Toast.show({
+        type: 'error',
+        text1: '🔧 Erreur debug',
+        text2: errorMessage,
+      });
+      
+      return { error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       session,
@@ -537,6 +633,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithOAuth,
       signInWithOtp,
       verifyOtp,
+      signInAsDebugUser,
+      debugAuthState,
       clearError,
       clearOtpState,
     }}>

@@ -1,5 +1,6 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Configuration Supabase - Remplacez par vos vraies valeurs
 const supabaseUrl = 'https://yrkjdoynzcvagcqmzmgw.supabase.co';
@@ -10,6 +11,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    storageKey: 'philsafe-auth-token',
+    storage: AsyncStorage, // Utiliser AsyncStorage pour React Native
+    // Options de debug en développement
+    ...__DEV__ && {
+      debug: true,
+    }
   },
 });
 

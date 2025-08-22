@@ -65,18 +65,42 @@ export function UserProvider({ children }: { children: ReactNode }) {
         // Si l'utilisateur n'existe pas dans la table users
         if (error.code === 'PGRST116') {
           console.log('User profile not found - creating empty profile state');
-          // Créer un profil vide avec les données de base de la session
-          setProfile({
-            id: userId,
-            email: session?.user?.email || null,
-            full_name: null,
-            role: null,
-            sub_role: null,
-            phone_number: null,
-            created_at: new Date().toISOString(),
-          });
+          
+          // En mode debug, créer un profil plus complet
+          const isDebugSession = session?.user?.id === '06192242-9578-4ca5-adf5-c305c42937b5';
+          
+          if (isDebugSession && __DEV__) {
+            console.log('🔧 DEBUG: Création profil debug complet');
+            setProfile({
+              id: userId,
+              email: session?.user?.email || null,
+              full_name: 'Debug User',
+              role: 'aidant',
+              sub_role: null,
+              phone_number: '+33 1 23 45 67 89',
+              created_at: new Date().toISOString(),
+            });
+          } else {
+            // Créer un profil vide avec les données de base de la session
+            setProfile({
+              id: userId,
+              email: session?.user?.email || null,
+              full_name: null,
+              role: null,
+              sub_role: null,
+              phone_number: null,
+              created_at: new Date().toISOString(),
+            });
+          }
         } else {
-          setError('Erreur lors de la récupération du profil utilisateur');
+          // Ne pas afficher d'erreur en mode debug pour éviter les toasts répétitifs
+          const isDebugSession = session?.user?.id === '06192242-9578-4ca5-adf5-c305c42937b5';
+          
+          if (!isDebugSession || !__DEV__) {
+            setError('Erreur lors de la récupération du profil utilisateur');
+          } else {
+            console.log('🔧 DEBUG: Erreur profil ignorée en mode debug');
+          }
         }
       } else {
         console.log('User profile fetched successfully:', data);

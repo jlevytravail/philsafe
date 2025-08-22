@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as Linking from 'expo-linking';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Mail, Lock, User, Heart, ArrowLeft } from 'lucide-react-native';
+import { Mail, Lock, User, Heart, ArrowLeft, Settings } from 'lucide-react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useForm } from '@/hooks/useForm';
@@ -26,7 +26,7 @@ export default function AuthScreen() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [otpCode, setOtpCode] = useState('');
 
-  const { signIn, signUp, resetPasswordForEmail, signInWithOAuth, signInWithOtp, verifyOtp, loading, error, clearError, otpSent, otpEmail, clearOtpState } = useAuth();
+  const { signIn, signUp, resetPasswordForEmail, signInWithOAuth, signInWithOtp, verifyOtp, signInAsDebugUser, loading, error, clearError, otpSent, otpEmail, clearOtpState } = useAuth();
   const { colors } = useThemeContext();
 
 
@@ -199,6 +199,20 @@ export default function AuthScreen() {
     signInWithOAuth(provider);
   };
 
+  const handleDebugLogin = () => {
+    Alert.alert(
+      '🔧 Connexion Debug',
+      'Se connecter avec l\'utilisateur de test pour accéder aux fonctionnalités de développement ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Connexion Debug', 
+          onPress: () => signInAsDebugUser()
+        }
+      ]
+    );
+  };
+
   const handleMagicLinkLogin = () => {
     if (!loginForm.formData.email) {
       Alert.alert(
@@ -315,6 +329,23 @@ export default function AuthScreen() {
       fontSize: 14,
       color: colors.error,
       textAlign: 'center',
+    },
+    debugButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.warning + '20' || '#FEF3C7',
+      borderWidth: 1,
+      borderColor: colors.warning || '#F59E0B',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginBottom: 16,
+    },
+    debugText: {
+      marginLeft: 8,
+      fontSize: 16,
+      color: colors.warning || '#D97706',
+      fontWeight: '600',
     },
   });
 
@@ -530,6 +561,17 @@ export default function AuthScreen() {
                 <Text style={[styles.dividerText, { color: colors.textTertiary }]}>ou</Text>
                 <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
               </View>
+
+              {__DEV__ && (
+                <TouchableOpacity
+                  style={styles.debugButton}
+                  onPress={handleDebugLogin}
+                  disabled={loading}
+                >
+                  <Settings size={20} color={colors.warning || '#D97706'} />
+                  <Text style={styles.debugText}>🔧 Connexion Debug</Text>
+                </TouchableOpacity>
+              )}
 
               <View style={styles.socialButtonsContainer}>
                 <SocialLoginButton

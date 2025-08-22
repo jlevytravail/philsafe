@@ -1,22 +1,22 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
-import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl;
-const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase configuration. Please add SUPABASE_URL and SUPABASE_ANON_KEY to your app.config.ts extra section.'
-  );
-}
+// Configuration Supabase - utiliser les mêmes valeurs que utils/supabase.ts
+const supabaseUrl = 'https://yrkjdoynzcvagcqmzmgw.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlya2pkb3luemN2YWdjcW16bWd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NTc0ODEsImV4cCI6MjA3MDIzMzQ4MX0.Q-Jyw6EPsrKkFpepFaUI8Czt3DP_kbrVwSVLxRSld5U';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true, // Activer pour les deep links
-    storage: undefined, // Uses AsyncStorage by default in React Native
+    detectSessionInUrl: false, // Désactiver pour éviter les conflits
+    storageKey: 'philsafe-auth-token', // Même clé que utils/supabase.ts
+    storage: AsyncStorage, // Utiliser AsyncStorage explicitement
+    // Options de debug en développement
+    ...__DEV__ && {
+      debug: true,
+    }
   },
 });
 
