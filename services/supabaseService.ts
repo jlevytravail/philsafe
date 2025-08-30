@@ -122,6 +122,8 @@ class SupabaseService {
       // Si c'est un aidant, d'abord récupérer ses patients
       let patientIds: string[] = [];
       if (options?.aidantId) {
+        console.log('🔍 DEBUG supabaseService - Recherche patients pour aidant:', options.aidantId);
+        
         const { data: links, error: linksError } = await supabase
           .from('aidant_patient_links')
           .select('patient_id')
@@ -130,8 +132,15 @@ class SupabaseService {
         if (linksError) throw linksError;
         patientIds = links?.map(link => link.patient_id) || [];
         
+        console.log('🔍 DEBUG supabaseService - Liens trouvés:', {
+          aidantId: options.aidantId,
+          linksCount: links?.length || 0,
+          patientIds: patientIds
+        });
+        
         // Si l'aidant n'a aucun patient lié, retourner un tableau vide
         if (patientIds.length === 0) {
+          console.log('⚠️ DEBUG supabaseService - Aucun patient lié pour cet aidant');
           return [];
         }
       }
@@ -194,6 +203,18 @@ class SupabaseService {
       const { data, error } = await query;
       
       if (error) throw error;
+      
+      console.log('🔍 DEBUG supabaseService - Résultats requête interventions:', {
+        options,
+        dataCount: data?.length || 0,
+        patientIds: patientIds.length > 0 ? patientIds : 'N/A',
+        interventions: data?.map(i => ({
+          id: i.id,
+          patient_name: i.patients?.full_name,
+          scheduled_start: i.scheduled_start,
+          status: i.status
+        }))
+      });
       
       // Mapper les données pour correspondre à notre interface
       return data?.map(intervention => ({

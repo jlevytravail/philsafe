@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Database, Settings, Trash2, CheckCircle, User, Eye, RefreshCw } from 'lucide-react-native';
 import { useThemeContext } from '@/context/ThemeContext';
-import { seedTestData, seedTestDataWithServices, cleanTestData } from '../scripts/seedTestData';
+import { seedTestData, seedTestDataWithServices, seedTestDataWithRPC, cleanTestData, cleanTestDataWithRPC, debugAidantPatientLinks, createTestDataManually } from '../scripts/seedTestData';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useSessionUser } from '@/context/UserContext';
 import { supabase } from '@/utils/supabase';
+import { useTodayInterventions } from '@/hooks/useInterventions';
 
 export default function TestDataScreen() {
   const [loading, setLoading] = useState(false);
@@ -16,6 +17,7 @@ export default function TestDataScreen() {
   const { colors } = useThemeContext();
   const { session, user, debugAuthState } = useAuth();
   const { profile } = useSessionUser();
+  const { refetch: refreshInterventions } = useTodayInterventions();
 
   useEffect(() => {
     checkSessionStatus();
@@ -159,8 +161,24 @@ export default function TestDataScreen() {
               // Attendre un peu pour laisser la session se stabiliser
               await new Promise(resolve => setTimeout(resolve, 1000));
               
-              // Utiliser la version avec services qui gère mieux les RLS
-              const result = await seedTestDataWithServices();
+              // D'abord essayer la version RPC
+              let result;
+              try {
+                setStatus('🔧 Tentative via fonction RPC PostgreSQL...');
+                result = await seedTestDataWithRPC();
+                setStatus('✅ Données créées via fonction RPC !');
+              } catch (rpcError: any) {
+                console.warn('⚠️ Fonction RPC échouée:', rpcError.message);
+                setStatus('⚠️ RPC échouée, tentative de solution de contournement...');
+                
+                // Attendre un peu pour que l'utilisateur voie le message
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Solution de contournement : création manuelle
+                setStatus('🔄 Création manuelle des données en cours...');
+                result = await createTestDataManually();
+                setStatus('✅ Données créées via solution de contournement TypeScript !');
+              }
               
               const successMessage = [
                 `📊 Données créées:`,
@@ -171,6 +189,17 @@ export default function TestDataScreen() {
               ].join('\n');
               
               setStatus(`✅ Insertion terminée !\n${successMessage}`);
+              
+              // Forcer le rafraîchissement des interventions après création
+              console.log('🔄 Forçage du refresh des interventions après création des données...');
+              setTimeout(async () => {
+                try {
+                  await refreshInterventions();
+                  console.log('✅ Refresh des interventions terminé');
+                } catch (err) {
+                  console.error('❌ Erreur lors du refresh des interventions:', err);
+                }
+              }, 2000); // Attendre 2s pour que les données se propagent
               
               setTimeout(() => {
                 Alert.alert(
@@ -313,8 +342,8 @@ export default function TestDataScreen() {
             setStatus('Suppression des données...');
             
             try {
-              await cleanTestData();
-              setStatus('✅ Données supprimées avec succès.');
+              const deletedCounts = await cleanTestDataWithRPC();
+              setStatus(`✅ Données supprimées avec succès.\n📊 Supprimé: ${deletedCounts.intervenants} intervenants, ${deletedCounts.patients} patients, ${deletedCounts.interventions} interventions`);
             } catch (error: any) {
               console.error('Erreur:', error);
               setStatus(`❌ Erreur : ${error?.message || 'Erreur inconnue'}`);
@@ -562,6 +591,49 @@ export default function TestDataScreen() {
           <Text style={styles.sectionDescription}>
             Retourner aux écrans principaux de l'application.
           </Text>
+          
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.warning || '#F59E0B' }]}
+            onPress={async () => {
+              setLoading(true);
+              try {
+                console.log('🔍 Diagnostic liens aidant-patient...');
+                await debugAidantPatientLinks();
+                setStatus('✅ Diagnostic terminé - Voir les logs console');
+              } catch (err) {
+                console.error('❌ Erreur diagnostic:', err);
+                setStatus('❌ Erreur lors du diagnostic');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+          >
+            <Eye size={20} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Debug Liens Patients</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: colors.success || '#10B981' }]}
+            onPress={async () => {
+              setLoading(true);
+              try {
+                console.log('🔄 Refresh manuel des interventions...');
+                await refreshInterventions();
+                setStatus('✅ Interventions rafraîchies avec succès !');
+                console.log('✅ Refresh manuel terminé');
+              } catch (err) {
+                console.error('❌ Erreur lors du refresh manuel:', err);
+                setStatus('❌ Erreur lors du refresh des interventions');
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+          >
+            <RefreshCw size={20} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Refresh Interventions</Text>
+          </TouchableOpacity>
           
           <TouchableOpacity
             style={styles.button}

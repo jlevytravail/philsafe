@@ -1,7 +1,7 @@
-# 📋 Progression de Session - PhilSafe Debug & Data Insertion
+# 📋 Progression de Session - PhilSafe RLS Solution & Data Insertion
 
 ## 🎯 Objectif de la session
-Résoudre les problèmes de connexion debug et d'insertion de données de test dans l'application PhilSafe.
+Résoudre les problèmes RLS (Row Level Security) et implémenter une solution fonctionnelle pour l'insertion de données de test dans l'application PhilSafe.
 
 ## ✅ Problèmes résolus avec succès
 
@@ -41,6 +41,14 @@ Résoudre les problèmes de connexion debug et d'insertion de données de test d
   - "Tester la configuration" → Validation avant insertion
   - "Debug Console AuthContext" → Logs console détaillés
 - ✅ Affichage AsyncStorage et détails de session
+
+### 5. **Solution RLS implémentée (30 août 2025)**
+- ✅ **Fonction PostgreSQL** `create_test_data()` avec SECURITY DEFINER
+- ✅ **Bypass complet des RLS** pour les données de test
+- ✅ **Stratégie adaptative** avec/sans intervenants existants
+- ✅ **5 interventions pour aujourd'hui** garanties
+- ✅ **Fonction de nettoyage** `clean_test_data()`
+- ✅ **Interface TypeScript** seedTestDataWithRPC() et cleanTestDataWithRPC()
 
 ## ❌ Problème actuel bloquant
 

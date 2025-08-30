@@ -13,6 +13,117 @@ interface TestData {
   aidantPatientLinks: any[];
 }
 
+// Version RPC utilisant une fonction Supabase pour bypasser les RLS
+export async function seedTestDataWithRPC(): Promise<TestData> {
+  console.log('🌱 Insertion des données de test via fonction RPC...');
+  
+  try {
+    // Vérifier que l'utilisateur est connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Utilisateur non connecté. Connectez-vous d\'abord pour insérer des données de test.');
+    }
+    console.log('👤 Utilisateur connecté:', user.email);
+
+    // Appeler la fonction RPC create_test_data
+    console.log('🔧 Appel de la fonction RPC create_test_data()...');
+    const { data: result, error: rpcError } = await supabase.rpc('create_test_data');
+    
+    if (rpcError) {
+      console.error('❌ Erreur RPC:', rpcError);
+      throw new Error(`Erreur fonction RPC: ${rpcError.message}`);
+    }
+    
+    if (!result) {
+      throw new Error('Aucune réponse de la fonction RPC');
+    }
+    
+    // Vérifier le résultat
+    if (result.success) {
+      console.log('🎉 Données de test créées avec succès via RPC !');
+      console.log('📊 Résumé:');
+      console.log(`├── Intervenants: ${result.data.intervenants_count}`);
+      console.log(`├── Patients: ${result.data.patients_count}`);
+      console.log(`├── Interventions: ${result.data.interventions_count}`);
+      console.log(`├── Notifications: ${result.data.notifications_count}`);
+      console.log(`└── Aidant ID: ${result.data.aidant_id}`);
+      
+      // Récupérer les données créées pour les retourner
+      console.log('📋 Récupération des données créées...');
+      
+      // Récupérer les intervenants créés
+      const { data: intervenants, error: intervenantsError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'intervenant')
+        .in('id', result.data.intervenants_ids);
+      
+      if (intervenantsError) {
+        console.warn('⚠️ Impossible de récupérer les intervenants:', intervenantsError);
+      }
+      
+      // Récupérer les patients créés
+      const { data: patients, error: patientsError } = await supabase
+        .from('patients')
+        .select('*')
+        .in('id', result.data.patients_ids);
+      
+      if (patientsError) {
+        console.warn('⚠️ Impossible de récupérer les patients:', patientsError);
+      }
+      
+      // Récupérer les interventions créées
+      const { data: interventions, error: interventionsError } = await supabase
+        .from('interventions')
+        .select('*')
+        .eq('created_by_id', user.id)
+        .gte('created_at', new Date(Date.now() - 60000).toISOString()); // Créées dans la dernière minute
+      
+      if (interventionsError) {
+        console.warn('⚠️ Impossible de récupérer les interventions:', interventionsError);
+      }
+      
+      // Récupérer les liens aidant-patient
+      const { data: aidantPatientLinks, error: linksError } = await supabase
+        .from('aidant_patient_links')
+        .select('*')
+        .eq('aidant_id', user.id)
+        .in('patient_id', result.data.patients_ids);
+      
+      if (linksError) {
+        console.warn('⚠️ Impossible de récupérer les liens:', linksError);
+      }
+      
+      // VÉRIFICATION CRITIQUE: Si aucun lien n'a été créé malgré le succès RPC, c'est un échec
+      if (!aidantPatientLinks || aidantPatientLinks.length === 0) {
+        console.error('❌ ÉCHEC CRITIQUE: La fonction RPC a réussi mais n\'a créé aucun lien aidant-patient !');
+        console.error('   → Les interventions ne seront pas visibles sur le dashboard');
+        console.error('   → Déclenchement de la solution de contournement...');
+        
+        // Lancer une erreur pour déclencher automatiquement le fallback
+        throw new Error('RPC function failed to create aidant-patient links - dashboard will be empty');
+      }
+      
+      console.log(`✅ ${aidantPatientLinks.length} liens aidant-patient créés avec succès`);
+      
+      return {
+        patients: patients || [],
+        intervenants: intervenants || [],
+        interventions: interventions || [],
+        aidantPatientLinks: aidantPatientLinks || []
+      };
+      
+    } else {
+      console.error('❌ Erreur rapportée par la fonction RPC:', result.error);
+      throw new Error(`Erreur RPC: ${result.error} (Code: ${result.error_code})`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'insertion des données via RPC:', error);
+    throw error;
+  }
+}
+
 // Version alternative utilisant les services (peut mieux gérer les RLS)
 export async function seedTestDataWithServices(): Promise<TestData> {
   console.log('🌱 Insertion des données de test via services...');
@@ -646,7 +757,55 @@ export async function seedTestData(): Promise<TestData> {
   }
 }
 
-// Fonction pour nettoyer les données de test
+// Fonction pour nettoyer les données de test via RPC (bypasse les RLS)
+export async function cleanTestDataWithRPC() {
+  console.log('🧹 Nettoyage des données de test via RPC...');
+  
+  try {
+    // Vérifier que l'utilisateur est connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Utilisateur non connecté. Connectez-vous d\'abord pour nettoyer les données de test.');
+    }
+    console.log('👤 Utilisateur connecté:', user.email);
+
+    // Appeler la fonction RPC clean_test_data
+    console.log('🔧 Appel de la fonction RPC clean_test_data()...');
+    const { data: result, error: rpcError } = await supabase.rpc('clean_test_data');
+    
+    if (rpcError) {
+      console.error('❌ Erreur RPC:', rpcError);
+      throw new Error(`Erreur fonction RPC: ${rpcError.message}`);
+    }
+    
+    if (!result) {
+      throw new Error('Aucune réponse de la fonction RPC');
+    }
+    
+    // Vérifier le résultat
+    if (result.success) {
+      console.log('🎉 Données de test nettoyées avec succès via RPC !');
+      console.log('📊 Résumé des suppressions:');
+      console.log(`├── Notifications: ${result.deleted_counts.notifications}`);
+      console.log(`├── Logs interventions: ${result.deleted_counts.intervention_logs}`);
+      console.log(`├── Interventions: ${result.deleted_counts.interventions}`);
+      console.log(`├── Liens aidant-patient: ${result.deleted_counts.aidant_patient_links}`);
+      console.log(`├── Patients: ${result.deleted_counts.patients}`);
+      console.log(`└── Intervenants: ${result.deleted_counts.intervenants}`);
+      
+      return result.deleted_counts;
+    } else {
+      console.error('❌ Erreur rapportée par la fonction RPC:', result.error);
+      throw new Error(`Erreur RPC: ${result.error} (Code: ${result.error_code})`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur lors du nettoyage des données via RPC:', error);
+    throw error;
+  }
+}
+
+// Fonction pour nettoyer les données de test (version originale avec RLS)
 export async function cleanTestData() {
   console.log('🧹 Nettoyage des données de test...');
   
@@ -662,6 +821,222 @@ export async function cleanTestData() {
     console.log('✅ Données de test supprimées');
   } catch (error) {
     console.error('❌ Erreur lors du nettoyage:', error);
+    throw error;
+  }
+}
+
+export async function debugAidantPatientLinks(): Promise<void> {
+  try {
+    console.log('🔍 DIAGNOSTIC: Liens aidant-patient');
+    
+    // 1. Vérifier l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('❌ Pas d\'utilisateur connecté:', userError);
+      return;
+    }
+    
+    console.log('👤 Utilisateur connecté:', user.id, user.email);
+    
+    // 2. Vérifier les patients existants
+    const { data: patients, error: patientsError } = await supabase
+      .from('patients')
+      .select('id, full_name, created_at')
+      .order('created_at', { ascending: false })
+      .limit(5);
+      
+    if (patientsError) {
+      console.error('❌ Erreur lecture patients:', patientsError);
+      return;
+    }
+    
+    console.log('🏥 Patients récents:', patients?.map(p => ({ id: p.id, name: p.full_name, created: p.created_at })));
+    
+    // 3. Vérifier les liens existants pour cet aidant
+    const { data: existingLinks, error: linksError } = await supabase
+      .from('aidant_patient_links')
+      .select('patient_id, patients!inner(full_name)')
+      .eq('aidant_id', user.id);
+      
+    if (linksError) {
+      console.error('❌ Erreur lecture liens:', linksError);
+      return;
+    }
+    
+    console.log('🔗 Liens existants pour cet aidant:', existingLinks);
+    
+    // 4. Tenter de créer manuellement un lien avec le patient le plus récent
+    if (patients && patients.length > 0) {
+      const firstPatient = patients[0];
+      console.log('🧪 Test: Création manuelle d\'un lien avec', firstPatient.full_name);
+      
+      const { data: insertResult, error: insertError } = await supabase
+        .from('aidant_patient_links')
+        .insert({
+          aidant_id: user.id,
+          patient_id: firstPatient.id
+        })
+        .select();
+        
+      if (insertError) {
+        console.error('❌ Erreur insertion lien manuel:', insertError);
+        
+        // Si c'est une erreur de doublon, c'est normal
+        if (insertError.code === '23505') {
+          console.log('ℹ️ Lien déjà existant (normal)');
+        }
+      } else {
+        console.log('✅ Lien créé manuellement:', insertResult);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur diagnostic liens:', error);
+  }
+}
+
+export async function createTestDataManually(): Promise<TestData> {
+  try {
+    console.log('🚀 SOLUTION DE CONTOURNEMENT: Création manuelle des données de test');
+    
+    // 1. Vérifier l'utilisateur connecté
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      throw new Error('Utilisateur non connecté');
+    }
+    
+    console.log('👤 Utilisateur connecté:', user.email);
+    
+    // 2. Créer les patients directement via TypeScript
+    console.log('🏥 Création des patients...');
+    const patientsToCreate = [
+      {
+        full_name: 'Pierre Durand',
+        address: '12 rue de la Paix, 75001 Paris',
+        birth_date: '1935-03-15',
+        medical_notes: 'Diabète type 2, hypertension artérielle, mobilité réduite. Traitement: Metformine 850mg x2/jour, Amlodipine 5mg/jour.'
+      },
+      {
+        full_name: 'Marie Leblanc',
+        address: '45 avenue Victor Hugo, 75016 Paris',
+        birth_date: '1942-07-22',
+        medical_notes: 'Arthrose sévère genoux et hanches, ostéoporose. Port de prothèse auditive. Aide pour la toilette et habillage.'
+      },
+      {
+        full_name: 'Robert Petit',
+        address: '8 place de la République, 75011 Paris',
+        birth_date: '1938-11-08',
+        medical_notes: 'Post-AVC, hémiparésie gauche, troubles de la déglutition. Kiné 3x/semaine, orthophonie 2x/semaine.'
+      }
+    ];
+    
+    const { data: patients, error: patientsError } = await supabase
+      .from('patients')
+      .insert(patientsToCreate)
+      .select();
+      
+    if (patientsError) {
+      console.error('❌ Erreur création patients:', patientsError);
+      throw patientsError;
+    }
+    
+    console.log('✅ Patients créés:', patients.map(p => p.full_name));
+    
+    // 3. Créer les liens aidant-patient
+    console.log('🔗 Création des liens aidant-patient...');
+    const linksToCreate = patients.map(patient => ({
+      aidant_id: user.id,
+      patient_id: patient.id
+    }));
+    
+    const { data: links, error: linksError } = await supabase
+      .from('aidant_patient_links')
+      .insert(linksToCreate)
+      .select();
+      
+    if (linksError) {
+      console.error('❌ Erreur création liens:', linksError);
+      throw linksError;
+    }
+    
+    console.log('✅ Liens créés:', links.length);
+    
+    // 4. Créer les interventions pour aujourd'hui
+    console.log('📅 Création des interventions d\'aujourd\'hui...');
+    const today = new Date().toISOString().split('T')[0]; // 2025-08-30
+    
+    const interventionsToCreate = [
+      // Patient 1 - 3 interventions aujourd'hui
+      {
+        patient_id: patients[0].id,
+        intervenant_id: null, // Pas d'intervenant assigné pour le test
+        created_by_id: user.id,
+        scheduled_start: `${today}T09:00:00`,
+        scheduled_end: `${today}T10:00:00`,
+        status: 'planned',
+        notes: ['toilette', 'prise_medicaments', 'surveillance_glycemie']
+      },
+      {
+        patient_id: patients[0].id,
+        intervenant_id: null,
+        created_by_id: user.id,
+        scheduled_start: `${today}T14:00:00`,
+        scheduled_end: `${today}T15:00:00`,
+        status: 'planned',
+        notes: ['soins_infirmiers', 'controle_tension']
+      },
+      {
+        patient_id: patients[0].id,
+        intervenant_id: null,
+        created_by_id: user.id,
+        scheduled_start: `${today}T18:00:00`,
+        scheduled_end: `${today}T19:00:00`,
+        status: 'planned',
+        notes: ['preparation_repas', 'aide_mobilite', 'compagnie']
+      },
+      // Patient 2 - 2 interventions aujourd'hui
+      {
+        patient_id: patients[1].id,
+        intervenant_id: null,
+        created_by_id: user.id,
+        scheduled_start: `${today}T10:00:00`,
+        scheduled_end: `${today}T11:00:00`,
+        status: 'planned',
+        notes: ['toilette', 'aide_habillage']
+      },
+      {
+        patient_id: patients[1].id,
+        intervenant_id: null,
+        created_by_id: user.id,
+        scheduled_start: `${today}T16:00:00`,
+        scheduled_end: `${today}T17:00:00`,
+        status: 'planned',
+        notes: ['kinesitherapie', 'exercices_mobilite']
+      }
+    ];
+    
+    const { data: interventions, error: interventionsError } = await supabase
+      .from('interventions')
+      .insert(interventionsToCreate)
+      .select();
+      
+    if (interventionsError) {
+      console.error('❌ Erreur création interventions:', interventionsError);
+      throw interventionsError;
+    }
+    
+    console.log('✅ Interventions créées:', interventions.length);
+    
+    return {
+      patients,
+      intervenants: [], // Pas d'intervenants créés dans cette solution
+      interventions,
+      aidantPatientLinks: links,
+      notifications: []
+    };
+    
+  } catch (error) {
+    console.error('❌ Erreur création manuelle des données:', error);
     throw error;
   }
 }

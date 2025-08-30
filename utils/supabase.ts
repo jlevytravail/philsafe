@@ -1,10 +1,40 @@
 import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 // Configuration Supabase - Remplacez par vos vraies valeurs
 const supabaseUrl = 'https://yrkjdoynzcvagcqmzmgw.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlya2pkb3luemN2YWdjcW16bWd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NTc0ODEsImV4cCI6MjA3MDIzMzQ4MX0.Q-Jyw6EPsrKkFpepFaUI8Czt3DP_kbrVwSVLxRSld5U';
+
+// Storage adapter compatible web et mobile
+const createStorage = () => {
+  if (Platform.OS === 'web') {
+    // Storage pour le web utilisant localStorage
+    return {
+      getItem: (key: string) => {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          return Promise.resolve(window.localStorage.getItem(key));
+        }
+        return Promise.resolve(null);
+      },
+      setItem: (key: string, value: string) => {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, value);
+        }
+        return Promise.resolve();
+      },
+      removeItem: (key: string) => {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.removeItem(key);
+        }
+        return Promise.resolve();
+      },
+    };
+  }
+  // Storage pour mobile utilisant AsyncStorage
+  return AsyncStorage;
+};
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -12,11 +42,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
     storageKey: 'philsafe-auth-token',
-    storage: AsyncStorage, // Utiliser AsyncStorage pour React Native
-    // Options de debug en développement
-    ...__DEV__ && {
-      debug: true,
-    }
+    storage: createStorage(),
+  },
+  global: {
+    headers: {
+      'apikey': supabaseAnonKey,
+    },
   },
 });
 

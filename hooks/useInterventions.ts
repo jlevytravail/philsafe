@@ -33,11 +33,34 @@ export function useInterventions(options: UseInterventionsOptions = {}) {
       // Filtrer selon le rôle de l'utilisateur
       if (profile.role === 'aidant') {
         queryOptions.aidantId = profile.id;
+        console.log('🔍 DEBUG useInterventions - Aidant:', {
+          aidantId: profile.id,
+          fullName: profile.full_name,
+          queryOptions
+        });
       } else if (profile.role === 'intervenant') {
         queryOptions.intervenantId = profile.id;
+        console.log('🔍 DEBUG useInterventions - Intervenant:', {
+          intervenantId: profile.id,
+          queryOptions
+        });
       }
       
       const data = await supabaseService.getInterventions(queryOptions);
+      
+      console.log('🔍 DEBUG useInterventions - Résultats:', {
+        role: profile.role,
+        userId: profile.id,
+        interventionsCount: data.length,
+        interventions: data.map(i => ({
+          id: i.id,
+          patient: i.patient?.full_name,
+          scheduled_start: i.scheduled_start,
+          status: i.status,
+          notes: i.notes
+        }))
+      });
+      
       setInterventions(data);
     } catch (err) {
       console.error('Erreur lors du chargement des interventions:', err);

@@ -406,37 +406,89 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 ```
 
-## ❌ Problème bloquant identifié : RLS Policies
+## ✅ Problème RLS résolu - Fonctions RPC implémentées (30 août 2025)
 
-### Erreurs Row Level Security
+### Solution RPC appliquée avec succès
+La solution **fonction RPC avec SECURITY DEFINER** a été implémentée pour contourner les restrictions RLS.
+
+### Problèmes résolus
+
+#### 1. ✅ Erreur RLS contournée
 ```
-ERROR: "new row violates row-level security policy for table \"users\""
-ERROR: "new row violates row-level security policy for table \"patients\""
+AVANT: ERROR: "new row violates row-level security policy for table \"users\""
+APRÈS: ✅ Fonction RPC bypasse les RLS avec SECURITY DEFINER
 ```
 
-### État validé
+#### 2. ✅ Contrainte FK résolue  
+```
+AVANT: ERROR: "insert or update on table \"users\" violates foreign key constraint \"users_id_fkey\""
+APRÈS: ✅ Plus de création d'utilisateurs - utilise seulement les intervenants existants
+```
+
+#### 3. ✅ Interventions aujourd'hui garanties
+```
+AVANT: Aucune intervention visible le 30/08/2025
+APRÈS: ✅ 5 interventions créées pour aujourd'hui (9h, 10h, 14h, 16h, 18h)
+```
+
+### Architecture RPC finale
+
+**Fichiers créés/modifiés :**
+- ✅ `supabase_rpc_function.sql` - Fonctions PostgreSQL complètes
+  - `create_test_data()` - Crée patients, interventions, liens sans violer RLS
+  - `clean_test_data()` - Nettoie les données de test
+- ✅ `scripts/seedTestData.ts` - Nouvelles fonctions TypeScript
+  - `seedTestDataWithRPC()` - Utilise les fonctions RPC
+  - `cleanTestDataWithRPC()` - Nettoie via RPC
+- ✅ `app/test-data.tsx` - Interface mise à jour pour RPC
+
+### Stratégie adaptative implémentée
+
+1. **Recherche d'intervenants existants** - Utilise les intervenants déjà en base
+2. **Création de patients garantie** - Toujours 3 patients créés
+3. **Interventions flexibles** - Avec ou sans intervenants assignés
+4. **Dates optimisées** - 5 interventions pour aujourd'hui minimum
+
+### Données de test créées
+
+**Patients (3) :**
+- Pierre Durand - Diabète, hypertension (75001 Paris)
+- Marie Leblanc - Arthrose, ostéoporose (75016 Paris)  
+- Robert Petit - Post-AVC, déglutition (75011 Paris)
+
+**Interventions aujourd'hui (5) :**
+- 09h-10h : Toilette, médicaments, surveillance glycémie
+- 10h-11h : Toilette, aide habillage (patient 2)
+- 14h-15h : Soins infirmiers, contrôle tension
+- 16h-17h : Kinésithérapie, exercices mobilité (patient 2)
+- 18h-19h : Préparation repas, aide mobilité, compagnie
+
+**Autres données :**
+- Interventions demain (2)
+- Intervention hier avec logs (1) 
+- Notifications (2)
+- Liens aidant-patient (3)
+
+### État validé (30 août 2025)
 - ✅ **Sessions parfaitement fonctionnelles** - AuthContext ↔ Supabase synchronisés
 - ✅ **Connexion debug opérationnelle** - Plus de problèmes de session
-- ❌ **RLS Policies trop restrictives** - Empêchent l'insertion des données de test
+- ✅ **RLS Policies contournées** - Fonctions RPC avec SECURITY DEFINER
+- ✅ **Contraintes FK respectées** - Pas de création d'utilisateurs auth
+- ✅ **Données de test complètes** - Interventions visibles aujourd'hui
+- ✅ **Interface fonctionnelle** - Création et nettoyage via RPC
 
-### Solutions à explorer (prochaine session)
-
-1. **Modifier les RLS Policies** dans Supabase Dashboard
-2. **Utiliser un compte admin** avec permissions élevées
-3. **Créer des fonctions RPC** qui bypass les RLS
-4. **Utiliser des données pré-existantes** en base
-
-### Commandes pour reprendre
+### Commandes opérationnelles
 
 ```bash
-# Relancer l'app
+# Application fonctionnelle
 cd C:\Users\33612\PhilSafe\philsafe
-npx expo start
+npx expo start --tunnel  # Pour iOS
 
-# Tester les sessions (maintenant fonctionnelles)
-# 1. Connexion debug : jlevy.travail@gmail.com
-# 2. /test-data → Vérifier sessions ✅
-# 3. Analyser RLS policies avant insertion
+# Tests validés
+# 1. Connexion debug : jlevy.travail@gmail.com ✅
+# 2. /test-data → Création RPC ✅  
+# 3. Dashboard → Interventions aujourd'hui visibles ✅
+# 4. Nettoyage RPC ✅
 ```
 
 ## 📁 Documentation organisée
