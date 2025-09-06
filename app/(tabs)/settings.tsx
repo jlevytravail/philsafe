@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Settings, User, Bell, Heart, Phone, Mail, Shield, CircleHelp as HelpCircle, ChevronRight, TestTube } from 'lucide-react-native';
+import { Settings, User, Bell, Heart, Phone, Mail, Shield, CircleHelp as HelpCircle, ChevronRight, TestTube, Activity } from 'lucide-react-native';
 import { Users, UserCheck, LogOut } from 'lucide-react-native';
 import NotificationService from '@/utils/notifications';
 import { Notification } from '@/types';
@@ -9,6 +9,7 @@ import { useThemeContext } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useSessionUser, useUser } from '@/context/UserContext';
 import { useRoleNavigation } from '@/hooks/useRoleNavigation';
+import { useRouter } from 'expo-router';
 import ThemeToggle from '@/components/ThemeToggle';
 import RoleTestingPanel from '@/components/RoleTestingPanel';
 
@@ -21,6 +22,7 @@ export default function SettingsScreen() {
   const { profile } = useSessionUser();
   const { updateUserProfile } = useUser();
   const { navigateToCurrentRoleHome } = useRoleNavigation();
+  const router = useRouter();
 
   const triggerTestNotification = () => {
     const testNotification: Notification = {
@@ -33,6 +35,11 @@ export default function SettingsScreen() {
     };
     
     NotificationService.getInstance().simulateNotification(testNotification);
+  };
+
+  const openImportDiagnostic = () => {
+    // Temporaire : utiliser test-data en attendant que import-diagnostic soit détecté
+    router.push('/test-data');
   };
 
   const handleSignOut = async () => {
@@ -349,6 +356,14 @@ export default function SettingsScreen() {
             subtitle="Tester les notifications push"
             onPress={triggerTestNotification}
           />
+          {__DEV__ && (
+            <SettingItem
+              icon={<Activity size={20} color="#3B82F6" />}
+              title="Diagnostic d'import"
+              subtitle="Tester l'import de calendriers"
+              onPress={openImportDiagnostic}
+            />
+          )}
           <SettingItem
             icon={<HelpCircle size={20} color="#6B7280" />}
             title="Centre d'aide"

@@ -48,6 +48,19 @@ export default function TestDataScreen() {
         
         if (sessionError) {
           sessionInfo.push(`   └── Erreur: ${sessionError.message}`);
+        }
+
+        // Test de la fonction get_user_id_from_auth()
+        if (directSession) {
+          try {
+            const { data: userIdData, error: userIdError } = await supabase.rpc('get_user_id_from_auth');
+            sessionInfo.push(`🆔 get_user_id_from_auth(): ${userIdData ? `✅ ${userIdData}` : '❌ null'}`);
+            if (userIdError) {
+              sessionInfo.push(`   └── Erreur: ${userIdError.message}`);
+            }
+          } catch (error) {
+            sessionInfo.push(`🆔 get_user_id_from_auth(): ❌ Fonction non disponible`);
+          }
         } else if (directSession) {
           sessionInfo.push(`   └── User: ${directSession.user?.email}`);
           sessionInfo.push(`   └── Expires: ${new Date(directSession.expires_at * 1000).toLocaleString()}`);

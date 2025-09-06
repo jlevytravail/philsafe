@@ -54,7 +54,7 @@ function AuthNavigator() {
     const inCompleteProfile = segments[0] === 'complete-profile';
     const inTabsGroup = segments[0] === '(tabs)';
     const inCaregiverGroup = segments[0] === '(caregiver)';
-    const inDevRoute = segments[0] === 'test-data' || segments[0] === 'debug' || segments[0] === 'admin';
+    const inDevRoute = segments[0] === 'test-data' || segments[0] === 'debug' || segments[0] === 'admin' || segments[0] === 'import-diagnostic';
 
     // Utiliser setTimeout pour s'assurer que la navigation se fait après le rendu
     const navigate = (path: string) => {
@@ -125,6 +125,7 @@ function AuthNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(caregiver)" />
       <Stack.Screen name="visit/[id]" />
+      <Stack.Screen name="import-diagnostic" />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
