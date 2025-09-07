@@ -1,5 +1,4 @@
 import { supabase } from '@/utils/supabase';
-import { supabaseServiceNoUsers } from './supabaseService_backup';
 
 // Types pour les tables de la base de données
 export interface Patient {
@@ -127,8 +126,83 @@ class SupabaseService {
     date?: string;
     status?: string;
   }) {
-    console.log('🔄 Redirection vers supabaseServiceNoUsers.getInterventions()');
-    return supabaseServiceNoUsers.getInterventions(options);
+    try {
+      // Si c'est un aidant, d'abord récupérer ses patients
+      let patientIds: string[] = [];
+      if (options?.aidantId) {
+        console.log('🔍 DEBUG - Recherche patients pour aidant:', options.aidantId);
+        
+        const { data: links, error: linksError } = await supabase
+          .from('aidant_patient_links')
+          .select('patient_id')
+          .eq('aidant_id', options.aidantId);
+        
+        if (linksError) throw linksError;
+        patientIds = links?.map(link => link.patient_id) || [];
+        
+        if (patientIds.length === 0) {
+          console.log('⚠️ DEBUG - Aucun patient lié pour cet aidant');
+          return [];
+        }
+      }
+
+      // Requête simple sur interventions
+      let query = supabase
+        .from('interventions')
+        .select(`
+          id,
+          patient_id,
+          intervenant_id,
+          created_by_id,
+          scheduled_start,
+          scheduled_end,
+          status,
+          notes,
+          created_at,
+          patients!patient_id (
+            id,
+            full_name,
+            address,
+            birth_date,
+            medical_notes
+          )
+        `);
+
+      // Appliquer les filtres
+      if (options?.aidantId && patientIds.length > 0) {
+        query = query.in('patient_id', patientIds);
+      }
+
+      if (options?.intervenantId) {
+        query = query.eq('intervenant_id', options.intervenantId);
+      }
+
+      if (options?.patientId) {
+        query = query.eq('patient_id', options.patientId);
+      }
+
+      if (options?.date) {
+        const startOfDay = `${options.date}T00:00:00.000Z`;
+        const endOfDay = `${options.date}T23:59:59.999Z`;
+        query = query
+          .gte('scheduled_start', startOfDay)
+          .lte('scheduled_start', endOfDay);
+      }
+
+      if (options?.status) {
+        query = query.eq('status', options.status);
+      }
+
+      query = query.order('scheduled_start', { ascending: true });
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+      
+    } catch (error) {
+      console.error('❌ Erreur dans getInterventions:', error);
+      throw error;
+    }
   }
 
   async createIntervention(intervention: Omit<Intervention, 'id' | 'created_at' | 'patient' | 'intervenant'>) {
@@ -164,10 +238,38 @@ class SupabaseService {
     return true;
   }
 
-  // === NOTIFICATIONS === (REDIRIGER VERS VERSION SANS USERS)
+  // === NOTIFICATIONS ===
   async getNotifications(aidantId: string) {
-    console.log('🔄 Redirection vers supabaseServiceNoUsers.getNotifications()');
-    return supabaseServiceNoUsers.getNotifications(aidantId);
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select(`
+          id,
+          aidant_id,
+          intervention_id,
+          type,
+          sent_at,
+          interventions!inner (
+            id,
+            scheduled_start,
+            scheduled_end,
+            status,
+            patients!inner (
+              full_name
+            )
+          )
+        `)
+        .eq('aidant_id', aidantId)
+        .order('sent_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('❌ Erreur dans getNotifications:', error);
+      // Retourner un tableau vide au lieu de throw pour éviter de bloquer l'app
+      return [];
+    }
   }
 
   // === LIENS AIDANT-PATIENT ===
@@ -211,6 +313,62 @@ class SupabaseService {
     
     if (error) throw error;
     return true;
+  }
+
+  // Subscription temps réel aux interventions
+  subscribeToInterventions(callback: (payload: any) => void) {
+    console.log('🔔 Souscription aux interventions en temps réel');
+    
+    const subscription = supabase
+      .channel('interventions_changes')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'interventions' 
+        },
+        (payload) => {
+          console.log('🔄 Changement détecté dans interventions:', payload);
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return {
+      unsubscribe: () => {
+        console.log('🔇 Désabonnement des interventions');
+        subscription.unsubscribe();
+      }
+    };
+  }
+
+  // Subscription temps réel aux notifications
+  subscribeToNotifications(callback: (payload: any) => void) {
+    console.log('🔔 Souscription aux notifications en temps réel');
+    
+    const subscription = supabase
+      .channel('notifications_changes')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'notifications' 
+        },
+        (payload) => {
+          console.log('🔄 Changement détecté dans notifications:', payload);
+          callback(payload);
+        }
+      )
+      .subscribe();
+
+    return {
+      unsubscribe: () => {
+        console.log('🔇 Désabonnement des notifications');
+        subscription.unsubscribe();
+      }
+    };
   }
 }
 

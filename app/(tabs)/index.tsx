@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Heart, Activity, RefreshCw, Database, Bell, Calendar } from 'lucide-react-native';
+import { Heart, Activity, RefreshCw, Bell, Calendar } from 'lucide-react-native';
 import InterventionCard from '@/components/InterventionCard';
 import { useTodayInterventions } from '@/hooks/useInterventions';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -55,9 +55,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleTestDataNavigation = () => {
-    router.push('/test-data');
-  };
 
   const handleInterventionStatusUpdate = async (interventionId: string, status: 'planned' | 'done' | 'missed') => {
     const success = await updateInterventionStatus(interventionId, status);
@@ -180,18 +177,6 @@ export default function Dashboard() {
     headerActions: {
       flexDirection: 'row',
       gap: 8,
-    },
-    testButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 20,
-    },
-    testText: {
-      marginLeft: 4,
-      fontSize: 14,
-      fontWeight: '500',
     },
     notificationBadge: {
       flexDirection: 'row',
@@ -316,12 +301,6 @@ export default function Dashboard() {
               <Text style={[styles.refreshText, { color: colors.primary }]}>Rafraîchir</Text>
             </TouchableOpacity>
             
-            {__DEV__ && (
-              <TouchableOpacity onPress={handleTestDataNavigation} style={[styles.testButton, { backgroundColor: colors.warning + '20' || '#FEF3C7' }]}>
-                <Database size={16} color={colors.warning || '#D97706'} />
-                <Text style={[styles.testText, { color: colors.warning || '#D97706' }]}>Test Data</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
 

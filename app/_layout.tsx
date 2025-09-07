@@ -38,6 +38,9 @@ function AuthNavigator() {
     // Attendre que le composant soit monté ET que le chargement soit terminé
     if (!isMounted || loading) return;
     
+    // Vérification supplémentaire pour s'assurer que le router est prêt
+    if (!router) return;
+    
     console.log('AuthNavigator - State:', { 
       hasSession: !!session, 
       sessionUserId: session?.user?.id,
@@ -54,14 +57,29 @@ function AuthNavigator() {
     const inCompleteProfile = segments[0] === 'complete-profile';
     const inTabsGroup = segments[0] === '(tabs)';
     const inCaregiverGroup = segments[0] === '(caregiver)';
-    const inDevRoute = segments[0] === 'test-data' || segments[0] === 'debug' || segments[0] === 'admin' || segments[0] === 'import-diagnostic';
+    const inDevRoute = segments[0] === 'debug' || segments[0] === 'admin' || segments[0] === 'import-diagnostic';
 
     // Utiliser setTimeout pour s'assurer que la navigation se fait après le rendu
     const navigate = (path: string) => {
+      // Double vérification avant navigation
+      if (!isMounted || !router) {
+        console.log('⚠️ Navigation annulée - composant non monté ou router indisponible');
+        return;
+      }
+      
       setTimeout(() => {
+        // Vérification finale avant navigation
+        if (!isMounted || !router) {
+          console.log('⚠️ Navigation annulée dans setTimeout - composant non monté');
+          return;
+        }
         console.log('Navigating to:', path);
-        router.replace(path);
-      }, 100); // Augmenter légèrement le délai pour être sûr
+        try {
+          router.replace(path);
+        } catch (error) {
+          console.log('❌ Erreur de navigation:', error);
+        }
+      }, 500); // Délai augmenté à 500ms pour éviter l'erreur de navigation avant montage
     };
 
     // Pas de session → page de connexion

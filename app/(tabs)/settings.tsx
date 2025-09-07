@@ -38,8 +38,7 @@ export default function SettingsScreen() {
   };
 
   const openImportDiagnostic = () => {
-    // Temporaire : utiliser test-data en attendant que import-diagnostic soit détecté
-    router.push('/test-data');
+    router.push('/import-diagnostic');
   };
 
   const handleSignOut = async () => {
