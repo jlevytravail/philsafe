@@ -78,7 +78,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(await handlers.getPatient(args), null, 2),
+              text: JSON.stringify(await handlers.getPatient(args as { id: string }), null, 2),
             },
           ],
         };
@@ -94,7 +94,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(await handlers.createPatient(args), null, 2),
+              text: JSON.stringify(await handlers.createPatient(args as any), null, 2),
             },
           ],
         };
@@ -120,7 +120,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(await handlers.createIntervention(args), null, 2),
+              text: JSON.stringify(await handlers.createIntervention(args as any), null, 2),
             },
           ],
         };
@@ -146,7 +146,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(await handlers.listNotifications(args), null, 2),
+              text: JSON.stringify(await handlers.listNotifications(args as { aidant_id: string }), null, 2),
             },
           ],
         };
@@ -159,7 +159,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: JSON.stringify(await handlers.getAidantPatients(args), null, 2),
+              text: JSON.stringify(await handlers.getAidantPatients(args as { aidant_id: string }), null, 2),
             },
           ],
         };

@@ -257,7 +257,7 @@ export class PhilSafeHandlers {
     
     if (error) throw error;
     
-    const links = data as (AidantPatientLink & { patients: Patient })[];
+    const links = data as any[];
     const patients = links.map(link => link.patients);
     
     return { patients, links };

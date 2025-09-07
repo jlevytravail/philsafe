@@ -2,7 +2,7 @@
   "mcpServers": {
     "philsafe": {
       "command": "node",
-      "args": ["C:\\Users\\jlevy\\PhilSafe\\philsafe\\mcp-server\\dist\\index.js"],
+      "args": ["C:\\Users\\33612\\PhilSafe\\philsafe\\mcp-server\\dist\\index.js"],
       "env": {
         "SUPABASE_URL": "https://yrkjdoynzcvagcqmzmgw.supabase.co",
         "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlya2pkb3luemN2YWdjcW16bWd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NTc0ODEsImV4cCI6MjA3MDIzMzQ4MX0.Q-Jyw6EPsrKkFpepFaUI8Czt3DP_kbrVwSVLxRSld5U"
